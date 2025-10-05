@@ -1,0 +1,14 @@
+# محیط و تنظیمات خصوصی
+AloVakil/.env
+*.env
+*.pyc
+__pycache__/
+db.sqlite3
+
+# VSCode / PyCharm
+.vscode/
+.idea/
+
+# Django stuff
+media/
+staticfiles/
