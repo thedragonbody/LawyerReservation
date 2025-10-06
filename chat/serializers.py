@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from .models import Conversation, Message
-from users.serializers import UserSerializer  # چون از User سفارشی استفاده می‌کنی
+from users.serializers import UserSerializer  
 
 class MessageSerializer(serializers.ModelSerializer):
     sender = UserSerializer(read_only=True)

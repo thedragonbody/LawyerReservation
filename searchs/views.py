@@ -16,7 +16,7 @@ CACHE_TIMEOUT_RESULTS = 60 * 5  # 5 دقیقه
 CACHE_TIMEOUT_SUGGEST = 60 * 3   # 3 دقیقه
 RATE_LIMIT = 50                  # 50 درخواست در دقیقه
 
-# ---------------------------- Global Multi-Model Search ----------------------------
+# Global Multi-Model Search 
 
 class GlobalSearchView(APIView):
     permission_classes = [AllowAny]
@@ -97,7 +97,7 @@ class GlobalSearchView(APIView):
         # Cache
         cache_conn.set(cache_key, str(results), ex=CACHE_TIMEOUT_RESULTS)
         return Response({"query": query, "results": results}, status=200)
-# ---------------------------- Search History ----------------------------
+# Search History 
 class SearchHistoryListView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -114,7 +114,7 @@ class SearchHistoryListView(APIView):
         cache_conn.set(cache_key, str(searches_list), CACHE_TIMEOUT_SUGGEST)
         return Response({"history": searches_list}, status=200)
 
-# ---------------------------- Search Suggestions / Autocomplete ----------------------------
+# Search Suggestions / Autocomplete 
 class SearchSuggestionsView(APIView):
 
     permission_classes = [IsAuthenticated]
@@ -133,13 +133,13 @@ class SearchSuggestionsView(APIView):
         if cached:
             return Response({"suggestions": eval(cached)})
 
-        # ----------------- Recent Searches -----------------
+        # Recent Searches
         recent_qs = SearchHistory.objects.filter(user=request.user)
         if entity_type:
             recent_qs = recent_qs.filter(entity_type=entity_type)
         recent_searches = recent_qs.order_by('-created_at').values_list("query", flat=True)
 
-        # ----------------- Popular Searches -----------------
+        # Popular Searches 
         popular_qs = SearchHistory.objects.all()
         if entity_type:
             popular_qs = popular_qs.filter(entity_type=entity_type)
