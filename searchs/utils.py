@@ -1,13 +1,13 @@
-import unicodedata
 import re
 
 def preprocess_query(query: str) -> str:
     """
-    حذف فاصله‌ها، حروف بزرگ/کوچک و نرمال‌سازی کاراکترها.
+    پاکسازی و نرمال‌سازی عبارت جستجو.
+    - حذف فاصله‌های اضافی
+    - lowercase
+    - حذف کاراکترهای خاص
     """
     query = query.strip().lower()
-    # حذف نمادهای غیر ضروری
-    query = re.sub(r"[^\w\s]", "", query)
-    # نرمال‌سازی حروف (مثلاً فارسی)
-    query = unicodedata.normalize("NFKC", query)
+    query = re.sub(r'\s+', ' ', query)
+    query = re.sub(r'[^\w\s]', '', query)
     return query

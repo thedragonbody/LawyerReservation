@@ -27,6 +27,7 @@ urlpatterns = [
     path("payments/", include("payments.urls")),
     path("cases", include("cases.urls")),
     path('api/searchs/', include('searchs.urls')),
+    path('api/chat/', include('chat.urls')),
 
     # مستندات API
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),

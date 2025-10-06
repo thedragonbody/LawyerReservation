@@ -85,6 +85,7 @@ INSTALLED_APPS = [
     'common',
     'appointments',
     'searchs',
+    'chat',
 ]
 
 REST_FRAMEWORK = {
