@@ -5,6 +5,9 @@ from django.shortcuts import get_object_or_404
 from django.db import transaction
 from decimal import Decimal
 import logging
+from .serializers import PaymentSerializer
+from django.utils import timezone
+from datetime import timedelta
 
 from .models import Payment
 from appointments.models import Appointment
@@ -133,3 +136,79 @@ class PaymentVerifyView(generics.GenericAPIView):
         payment.status = Payment.Status.FAILED
         payment.save(update_fields=["status", "provider_data"])
         return Response({"detail": "Payment failed"}, status=400)
+    
+# ==============================
+# Payment List with Pagination
+# ==============================
+from rest_framework.pagination import PageNumberPagination
+
+class PaymentPagination(PageNumberPagination):
+    page_size = 10
+    page_size_query_param = "page_size"
+    max_page_size = 50
+
+class PaymentListView(generics.ListAPIView):
+    serializer_class = PaymentSerializer
+    permission_classes = [IsAuthenticated]
+    pagination_class = PaymentPagination
+
+    def get_queryset(self):
+        user = self.request.user
+        return Payment.objects.filter(user=user).order_by('-created_at')
+
+
+# ==============================
+# Cancel Payment / Appointment
+# ==============================
+class PaymentCancelView(generics.GenericAPIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, payment_id):
+        payment = Payment.objects.filter(id=payment_id, user=request.user).first()
+        if not payment:
+            return Response({"detail": "Payment not found."}, status=404)
+
+        if payment.status != Payment.Status.COMPLETED:
+            return Response({"detail": "Only completed payments can be cancelled."}, status=400)
+
+        # بررسی محدودیت 24 ساعت
+        now = timezone.now()
+        time_diff = now - payment.created_at
+        if time_diff > timedelta(hours=24):
+            return Response({"detail": "Cancellation period expired (24h limit)."}, status=403)
+
+        appointment = payment.appointment
+
+        with transaction.atomic():
+            # لغو رزرو
+            appointment.status = Appointment.Status.CANCELLED
+            appointment.save(update_fields=["status"])
+
+            # خالی کردن slot
+            slot = appointment.slot
+            slot.is_booked = False
+            slot.save(update_fields=["is_booked"])
+
+            # بروزرسانی پرداخت
+            payment.status = Payment.Status.REFUNDED
+            payment.save(update_fields=["status"])
+
+        # Notification و SMS
+        try:
+            send_user_notification(
+                request.user,
+                "رزرو لغو شد و پول بازگشت داده شد",
+                f"رزرو شما با {appointment.lawyer.user.get_full_name()} در {slot.start_time} لغو شد."
+            )
+        except Exception as e:
+            logger.warning("send_user_notification failed: %s", e)
+
+        try:
+            send_sms(
+                request.user.phone_number,
+                f"رزرو شما لغو شد و پول بازگشت داده شد. وقت {slot.start_time} با {appointment.lawyer.user.get_full_name()} لغو شد."
+            )
+        except Exception as e:
+            logger.warning("send_sms failed: %s", e)
+
+        return Response({"detail": "Payment cancelled and appointment slot released."}, status=200)

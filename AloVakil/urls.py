@@ -26,7 +26,8 @@ urlpatterns = [
     path('notifications/', include('notifications.urls')),
     path("payments/", include("payments.urls")),
     path("cases", include("cases.urls")),
-    
+    path('api/searchs/', include('searchs.urls')),
+
     # مستندات API
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
     path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema", permission_classes=[IsAuthenticated]), name="swagger-ui"),

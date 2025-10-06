@@ -34,13 +34,7 @@ class RegisterView(generics.CreateAPIView):
         uidb64 = urlsafe_base64_encode(force_bytes(user.pk))
         verify_link = f"http://localhost:3000/verify-email/{uidb64}/{token}/"
 
-        send_mail(
-            "Verify your email",
-            f"Click to verify your account: {verify_link}",
-            "no-reply@alovakil.com",
-            [user.email],
-            fail_silently=False,
-        )
+
 
 # ----------------------------
 # Email Verification

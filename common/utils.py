@@ -6,6 +6,8 @@ from notifications.models import Notification
 from notifications.serializers import NotificationSerializer
 import requests
 from django.conf import settings
+import re
+import unicodedata
 
 logger = logging.getLogger("common")
 
@@ -49,3 +51,28 @@ def send_sms(phone_number: str, message: str):
         resp.raise_for_status()
     except Exception as e:
         logger.warning("SMS sending failed for %s: %s", phone_number, e)
+
+def normalize_text(text: str) -> str:
+    """
+    پاکسازی متن برای جستجو — حذف فاصله‌های اضافی، 
+    نرمال‌سازی کاراکترهای فارسی و انگلیسی، و حذف علائم.
+    """
+    if not text:
+        return ""
+    
+    # نرمال‌سازی یونیکد
+    text = unicodedata.normalize("NFKC", text)
+
+    # جایگزینی حروف عربی به فارسی
+    replacements = {
+        "ي": "ی",
+        "ك": "ک",
+    }
+    for k, v in replacements.items():
+        text = text.replace(k, v)
+
+    # حذف کاراکترهای غیر ضروری
+    text = re.sub(r"[^0-9آ-یA-Za-z\s@.]", " ", text)
+    text = re.sub(r"\s+", " ", text)
+    
+    return text.strip()

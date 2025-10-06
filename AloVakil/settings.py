@@ -84,6 +84,7 @@ INSTALLED_APPS = [
     'notifications',
     'common',
     'appointments',
+    'searchs',
 ]
 
 REST_FRAMEWORK = {
@@ -222,3 +223,26 @@ else:
     }
 
 SMS_SENDER = "1000596446"
+
+ELASTICSEARCH_DSL = {
+    'default': {
+        'hosts': env.str('ELASTICSEARCH_HOST', default='localhost:9200')
+    },
+}
+
+# Redis (Cache + Celery Broker)
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": env.str("REDIS_URL", default="redis://127.0.0.1:6379/1"),
+        "OPTIONS": {"CLIENT_CLASS": "django_redis.client.DefaultClient"},
+        "KEY_PREFIX": "alovakil"
+    }
+}
+
+CELERY_BROKER_URL = env.str("REDIS_URL", default="redis://127.0.0.1:6379/0")
+CELERY_RESULT_BACKEND = CELERY_BROKER_URL
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+
