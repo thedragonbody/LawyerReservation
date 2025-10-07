@@ -247,3 +247,12 @@ CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 
+ASGI_APPLICATION = "AloVakil.asgi.application"
+
+# اگر می‌خوای روی Redis باشه (production / real-time)
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {"hosts": [("127.0.0.1", 6379)]},  # یا REDIS_URL از env
+    }
+}
