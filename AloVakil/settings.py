@@ -9,7 +9,9 @@ from pathlib import Path
 import environ
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
-BASE_DIR = Path(__file__).resolve().parent.parent
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+FIREBASE_CREDENTIALS_JSON = os.path.join(BASE_DIR, "config", "firebase.json")  # اگر از os.path استفاده میکنی
 
 env = environ.Env(
     DEBUG=(bool, False)
@@ -42,7 +44,7 @@ DATABASES = {
     }
 }
 MEDIA_URL = '/media/'  # URL برای دسترسی به فایل‌ها
-MEDIA_ROOT = BASE_DIR / 'media'  # مسیر واقعی روی سرور
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 # Quick-start development settings - unsuitable for production
 
@@ -87,6 +89,8 @@ INSTALLED_APPS = [
     'searchs',
     'chat',
     'categories',
+    'rating_and_reviews',
+    'django_filters',
 ]
 
 REST_FRAMEWORK = {

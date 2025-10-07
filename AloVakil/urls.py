@@ -29,7 +29,8 @@ urlpatterns = [
     path('api/searchs/', include('searchs.urls')),
     path('api/chat/', include('chat.urls')),
     path('categories/', include('categories.urls')),
-    
+    path('rating_and_reviews/', include('rating_and_reviews.urls')),
+
     # مستندات API
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
     path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema", permission_classes=[IsAuthenticated]), name="swagger-ui"),

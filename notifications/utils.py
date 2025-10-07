@@ -2,7 +2,7 @@ import logging
 from notifications.models import Notification
 from common.utils import send_sms
 import firebase_admin
-from firebase_admin import credentials, messaging
+from firebase_admin import credentials, messaging, initialize_app
 from django.conf import settings
 
 logger = logging.getLogger("notifications")
