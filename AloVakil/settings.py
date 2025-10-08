@@ -78,6 +78,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'rest_framework_simplejwt.token_blacklist',
     'drf_spectacular',
+    'django_filters',
 
     # Local apps
     'users',
@@ -90,7 +91,7 @@ INSTALLED_APPS = [
     'chat',
     'categories',
     'rating_and_reviews',
-    'django_filters',
+    
 ]
 
 REST_FRAMEWORK = {

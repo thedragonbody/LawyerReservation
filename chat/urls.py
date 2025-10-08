@@ -1,7 +1,8 @@
 from django.urls import path
-from .views import SendMessageView, GetMessagesView
+from .views import SendMessageView, GetMessagesView, TypingIndicatorView
 
 urlpatterns = [
-    path("send/", SendMessageView.as_view(), name="send_message"),
-    path("<int:lawyer_id>/<int:client_id>/", GetMessagesView.as_view(), name="get_messages"),
+    path('send-message/', SendMessageView.as_view(), name='send-message'),
+    path('get-messages/<int:lawyer_id>/<int:client_id>/', GetMessagesView.as_view(), name='get-messages'),
+    path('typing-indicator/', TypingIndicatorView.as_view(), name='typing-indicator'),
 ]

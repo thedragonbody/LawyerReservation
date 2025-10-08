@@ -1,15 +1,16 @@
 from rest_framework import generics, status
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
+from rest_framework.pagination import PageNumberPagination
 from django.shortcuts import get_object_or_404
 from django.db import transaction
-from decimal import Decimal
-import logging
-from .serializers import PaymentSerializer
 from django.utils import timezone
 from datetime import timedelta
+from decimal import Decimal
+import logging
 
 from .models import Payment
+from .serializers import PaymentSerializer
 from appointments.models import Appointment
 from .utils import create_payment_request, verify_payment_request
 from common.utils import send_user_notification, send_sms
@@ -17,20 +18,25 @@ from common.utils import send_user_notification, send_sms
 logger = logging.getLogger("payments")
 
 
+# ==============================
+# Payment Create
+# ==============================
 class PaymentCreateView(generics.GenericAPIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, appointment_id):
+        """ایجاد تراکنش جدید برای رزرو یک نوبت"""
         appointment = get_object_or_404(Appointment, id=appointment_id, client__user=request.user)
+
         if appointment.status == Appointment.Status.CONFIRMED:
             return Response({"detail": "Appointment already confirmed."}, status=400)
 
-        # قیمت از slot گرفته شود
+        # مبلغ از slot گرفته می‌شود
         amount_decimal = getattr(appointment.slot, "price", Decimal("500000"))
-
         multiplier = getattr(__import__("django.conf").conf.settings, "PAYMENT_AMOUNT_MULTIPLIER", 1)
         amount_int = int(amount_decimal * Decimal(multiplier))
 
+        # ساخت پرداخت اولیه
         payment = Payment.objects.create(
             appointment=appointment,
             user=request.user,
@@ -38,19 +44,19 @@ class PaymentCreateView(generics.GenericAPIView):
             status=Payment.Status.PENDING
         )
 
-        callback = request.build_absolute_uri("/api/payments/verify/")
+        callback_url = request.build_absolute_uri("/api/payments/verify/")
 
         try:
             provider_resp = create_payment_request(
                 order_id=payment.id,
                 amount=amount_int,
-                callback=callback,
+                callback=callback_url,
                 phone=getattr(request.user, "phone_number", "")
             )
         except Exception as e:
             payment.status = Payment.Status.FAILED
             payment.save(update_fields=["status"])
-            logger.error("Payment creation failed: %s", e)
+            logger.exception("Payment creation failed: %s", e)
             return Response({"detail": "Payment gateway error"}, status=500)
 
         tx_id = provider_resp.get("id") or provider_resp.get("track_id") or provider_resp.get("trans_id")
@@ -65,13 +71,17 @@ class PaymentCreateView(generics.GenericAPIView):
         }, status=200)
 
 
+# ==============================
+# Payment Verify
+# ==============================
 class PaymentVerifyView(generics.GenericAPIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
+        """تایید وضعیت پرداخت از سمت درگاه"""
         data = request.data
         payment_id = data.get("id") or data.get("payment_id") or data.get("transaction_id")
-        order_id = data.get("order_id") or data.get("orderId") or data.get("order_id")
+        order_id = data.get("order_id") or data.get("orderId")
 
         payment = None
         if order_id:
@@ -89,20 +99,23 @@ class PaymentVerifyView(generics.GenericAPIView):
         try:
             provider_res = verify_payment_request(payment.transaction_id)
         except Exception as e:
-            logger.error("Provider verify failed: %s", e)
+            logger.exception("Provider verify failed: %s", e)
             return Response({"detail": "Provider verify failed"}, status=502)
 
         payment.provider_data = provider_res
-
         provider_status = provider_res.get("status") or provider_res.get("result", {}).get("status")
 
-        if provider_status == 100 or str(provider_status) == "100":
-            # atomic update
+        # ✅ پرداخت موفق
+        if str(provider_status) == "100":
             with transaction.atomic():
                 appointment = payment.appointment
                 slot = appointment.slot
 
-                # بررسی idempotent
+                # جلوگیری از اجرای تکراری (idempotent)
+                if appointment.status == Appointment.Status.CONFIRMED:
+                    return Response({"detail": "Appointment already confirmed."}, status=200)
+
+                # بروز رسانی slot و appointment
                 if not slot.is_booked:
                     slot.is_booked = True
                     slot.save(update_fields=["is_booked"])
@@ -114,6 +127,7 @@ class PaymentVerifyView(generics.GenericAPIView):
                 payment.status = Payment.Status.COMPLETED
                 payment.save(update_fields=["status", "provider_data"])
 
+            # ارسال نوتیف و پیامک
             try:
                 send_user_notification(
                     appointment.client.user,
@@ -133,19 +147,20 @@ class PaymentVerifyView(generics.GenericAPIView):
 
             return Response({"detail": "Payment verified and appointment confirmed."}, status=200)
 
+        # ❌ پرداخت ناموفق
         payment.status = Payment.Status.FAILED
         payment.save(update_fields=["status", "provider_data"])
         return Response({"detail": "Payment failed"}, status=400)
-    
-# ==============================
-# Payment List with Pagination
-# ==============================
-from rest_framework.pagination import PageNumberPagination
 
+
+# ==============================
+# Payment List (Paginated)
+# ==============================
 class PaymentPagination(PageNumberPagination):
     page_size = 10
     page_size_query_param = "page_size"
     max_page_size = 50
+
 
 class PaymentListView(generics.ListAPIView):
     serializer_class = PaymentSerializer
@@ -153,17 +168,17 @@ class PaymentListView(generics.ListAPIView):
     pagination_class = PaymentPagination
 
     def get_queryset(self):
-        user = self.request.user
-        return Payment.objects.filter(user=user).order_by('-created_at')
+        return Payment.objects.filter(user=self.request.user).order_by('-created_at')
 
 
 # ==============================
-# Cancel Payment / Appointment
+# Cancel Payment / Refund
 # ==============================
 class PaymentCancelView(generics.GenericAPIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, payment_id):
+        """لغو رزرو و بازگشت پول ظرف ۲۴ ساعت"""
         payment = Payment.objects.filter(id=payment_id, user=request.user).first()
         if not payment:
             return Response({"detail": "Payment not found."}, status=404)
@@ -171,21 +186,19 @@ class PaymentCancelView(generics.GenericAPIView):
         if payment.status != Payment.Status.COMPLETED:
             return Response({"detail": "Only completed payments can be cancelled."}, status=400)
 
-        # بررسی محدودیت 24 ساعت
-        now = timezone.now()
-        time_diff = now - payment.created_at
-        if time_diff > timedelta(hours=24):
+        # بررسی محدودیت ۲۴ ساعته
+        if timezone.now() - payment.created_at > timedelta(hours=24):
             return Response({"detail": "Cancellation period expired (24h limit)."}, status=403)
 
         appointment = payment.appointment
+        slot = appointment.slot
 
         with transaction.atomic():
             # لغو رزرو
             appointment.status = Appointment.Status.CANCELLED
             appointment.save(update_fields=["status"])
 
-            # خالی کردن slot
-            slot = appointment.slot
+            # آزادسازی Slot
             slot.is_booked = False
             slot.save(update_fields=["is_booked"])
 
@@ -193,11 +206,11 @@ class PaymentCancelView(generics.GenericAPIView):
             payment.status = Payment.Status.REFUNDED
             payment.save(update_fields=["status"])
 
-        # Notification و SMS
+        # اطلاع‌رسانی
         try:
             send_user_notification(
                 request.user,
-                "رزرو لغو شد و پول بازگشت داده شد",
+                "رزرو لغو شد و وجه بازگشت داده شد",
                 f"رزرو شما با {appointment.lawyer.user.get_full_name()} در {slot.start_time} لغو شد."
             )
         except Exception as e:
@@ -206,7 +219,7 @@ class PaymentCancelView(generics.GenericAPIView):
         try:
             send_sms(
                 request.user.phone_number,
-                f"رزرو شما لغو شد و پول بازگشت داده شد. وقت {slot.start_time} با {appointment.lawyer.user.get_full_name()} لغو شد."
+                f"رزرو شما لغو شد و وجه بازگشت داده شد. وقت {slot.start_time} با {appointment.lawyer.user.get_full_name()} لغو شد."
             )
         except Exception as e:
             logger.warning("send_sms failed: %s", e)
