@@ -28,7 +28,8 @@ urlpatterns = [
     path("chat/", include("chat.urls")),
     path("categories/", include("categories.urls")),
     path("rating_and_reviews/", include("rating_and_reviews.urls")),
-
+    path("ai/assistant/", include("ai_assistant.urls")),
+    
     # API Docs
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
     path(

@@ -91,6 +91,7 @@ INSTALLED_APPS = [
     'chat',
     'categories',
     'rating_and_reviews',
+    'ai_assistant',
     
 ]
 
@@ -262,3 +263,5 @@ CHANNEL_LAYERS = {
         "CONFIG": {"hosts": [("127.0.0.1", 6379)]},  # یا REDIS_URL از env
     }
 }
+
+OPENAI_API_KEY = "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"
