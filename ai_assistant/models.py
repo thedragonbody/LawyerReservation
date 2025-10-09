@@ -15,10 +15,63 @@ class AIQuestion(models.Model):
         null=True,
         help_text="نوع شخصیت یا نقش AI (مثلاً lawyer, educator, career)"
     )
-    importance = models.IntegerField(default=1, help_text="وزن یا اهمیت سوال برای memory")
+    importance = models.PositiveIntegerField(default=1, help_text="وزن یا اهمیت سوال")
     created_at = models.DateTimeField(auto_now_add=True)
     answered_at = models.DateTimeField(blank=True, null=True)
 
     def __str__(self):
         short_q = (self.question[:30] + "...") if len(self.question) > 30 else self.question
         return f"{self.user.email} - {short_q}"
+
+
+class AIErrorLog(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
+    question = models.TextField(blank=True, null=True)
+    error = models.TextField()
+    traceback = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"AIError @ {self.created_at} | user: {self.user}"
+
+
+class AIUsage(models.Model):
+    # یک رکورد برای هر روز (user+date). جمع ماهیانه از رکوردهای روزانه محاسبه می‌شود.
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    date = models.DateField(auto_now_add=True, db_index=True)
+    daily_count = models.PositiveIntegerField(default=0)
+    # monthly_count برای سرعت دسترسی (اختیاری) — ما از جمع روزها هم استفاده می‌کنیم
+    monthly_count = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        unique_together = ("user", "date")
+        ordering = ["-date"]
+
+    def __str__(self):
+        return f"{self.user.email} - {self.date} - daily:{self.daily_count} monthly:{self.monthly_count}"
+
+
+# ------------ Plan & Subscription (اضافه‌شده برای محدودیت/اشتراک) -------------
+class AIPlan(models.Model):
+    """
+    طرح‌ها (Free / Pro / ...) — می‌تونی از اینجا پنل مدیریت بسازی.
+    """
+    name = models.CharField(max_length=50, unique=True)
+    daily_limit = models.PositiveIntegerField(default=10)
+    monthly_limit = models.PositiveIntegerField(default=300)
+    price_cents = models.PositiveIntegerField(default=0)  # قیمت در واحد کوچکتر (اختیاری)
+    description = models.TextField(blank=True)
+
+    def __str__(self):
+        return f"{self.name} (daily:{self.daily_limit} monthly:{self.monthly_limit})"
+
+
+class Subscription(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="ai_subscriptions")
+    plan = models.ForeignKey(AIPlan, on_delete=models.PROTECT)
+    active = models.BooleanField(default=True)
+    starts_at = models.DateTimeField(auto_now_add=True)
+    ends_at = models.DateTimeField(blank=True, null=True)
+
+    def __str__(self):
+        return f"{self.user.email} -> {self.plan.name} (active={self.active})"
