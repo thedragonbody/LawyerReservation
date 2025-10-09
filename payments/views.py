@@ -15,28 +15,32 @@ from appointments.models import Appointment
 from .utils import create_payment_request, verify_payment_request
 from common.utils import send_user_notification, send_sms
 
+# subscription models (optional)
+try:
+    from ai_assistant.models import Subscription, AIPlan
+except Exception:
+    Subscription = None
+    AIPlan = None
+
 logger = logging.getLogger("payments")
 
 
 # ==============================
-# Payment Create
+# Payment Create (appointment)
 # ==============================
 class PaymentCreateView(generics.GenericAPIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, appointment_id):
-        """ایجاد تراکنش جدید برای رزرو یک نوبت"""
         appointment = get_object_or_404(Appointment, id=appointment_id, client__user=request.user)
 
         if appointment.status == Appointment.Status.CONFIRMED:
             return Response({"detail": "Appointment already confirmed."}, status=400)
 
-        # مبلغ از slot گرفته می‌شود
         amount_decimal = getattr(appointment.slot, "price", Decimal("500000"))
         multiplier = getattr(__import__("django.conf").conf.settings, "PAYMENT_AMOUNT_MULTIPLIER", 1)
         amount_int = int(amount_decimal * Decimal(multiplier))
 
-        # ساخت پرداخت اولیه
         payment = Payment.objects.create(
             appointment=appointment,
             user=request.user,
@@ -78,7 +82,6 @@ class PaymentVerifyView(generics.GenericAPIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
-        """تایید وضعیت پرداخت از سمت درگاه"""
         data = request.data
         payment_id = data.get("id") or data.get("payment_id") or data.get("transaction_id")
         order_id = data.get("order_id") or data.get("orderId")
@@ -105,29 +108,29 @@ class PaymentVerifyView(generics.GenericAPIView):
         payment.provider_data = provider_res
         provider_status = provider_res.get("status") or provider_res.get("result", {}).get("status")
 
-        # ✅ پرداخت موفق
         if str(provider_status) == "100":
             with transaction.atomic():
                 appointment = payment.appointment
                 slot = appointment.slot
 
-                # جلوگیری از اجرای تکراری (idempotent)
-                if appointment.status == Appointment.Status.CONFIRMED:
-                    return Response({"detail": "Appointment already confirmed."}, status=200)
+                if appointment.status != Appointment.Status.CONFIRMED:
+                    if not getattr(slot, "is_booked", False):
+                        slot.is_booked = True
+                        slot.save(update_fields=["is_booked"])
 
-                # بروز رسانی slot و appointment
-                if not slot.is_booked:
-                    slot.is_booked = True
-                    slot.save(update_fields=["is_booked"])
+                    appointment.status = Appointment.Status.CONFIRMED
+                    if hasattr(appointment, "transaction_id"):
+                        appointment.transaction_id = payment.transaction_id
+                        appointment.save(update_fields=["status", "transaction_id"])
+                    else:
+                        appointment.save(update_fields=["status"])
 
-                appointment.status = Appointment.Status.CONFIRMED
-                appointment.transaction_id = payment.transaction_id
-                appointment.save(update_fields=["status", "transaction_id"])
+                if hasattr(payment, "mark_completed") and callable(getattr(payment, "mark_completed")):
+                    payment.mark_completed(provider_data=provider_res)
+                else:
+                    payment.status = Payment.Status.COMPLETED
+                    payment.save(update_fields=["status", "provider_data"])
 
-                payment.status = Payment.Status.COMPLETED
-                payment.save(update_fields=["status", "provider_data"])
-
-            # ارسال نوتیف و پیامک
             try:
                 send_user_notification(
                     appointment.client.user,
@@ -147,14 +150,13 @@ class PaymentVerifyView(generics.GenericAPIView):
 
             return Response({"detail": "Payment verified and appointment confirmed."}, status=200)
 
-        # ❌ پرداخت ناموفق
         payment.status = Payment.Status.FAILED
         payment.save(update_fields=["status", "provider_data"])
         return Response({"detail": "Payment failed"}, status=400)
 
 
 # ==============================
-# Payment List (Paginated)
+# Payment List
 # ==============================
 class PaymentPagination(PageNumberPagination):
     page_size = 10
@@ -172,13 +174,12 @@ class PaymentListView(generics.ListAPIView):
 
 
 # ==============================
-# Cancel Payment / Refund
+# Payment Cancel / Refund
 # ==============================
 class PaymentCancelView(generics.GenericAPIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, payment_id):
-        """لغو رزرو و بازگشت پول ظرف ۲۴ ساعت"""
         payment = Payment.objects.filter(id=payment_id, user=request.user).first()
         if not payment:
             return Response({"detail": "Payment not found."}, status=404)
@@ -186,7 +187,6 @@ class PaymentCancelView(generics.GenericAPIView):
         if payment.status != Payment.Status.COMPLETED:
             return Response({"detail": "Only completed payments can be cancelled."}, status=400)
 
-        # بررسی محدودیت ۲۴ ساعته
         if timezone.now() - payment.created_at > timedelta(hours=24):
             return Response({"detail": "Cancellation period expired (24h limit)."}, status=403)
 
@@ -194,24 +194,26 @@ class PaymentCancelView(generics.GenericAPIView):
         slot = appointment.slot
 
         with transaction.atomic():
-            # لغو رزرو
             appointment.status = Appointment.Status.CANCELLED
             appointment.save(update_fields=["status"])
+            if getattr(slot, "is_booked", False):
+                slot.is_booked = False
+                slot.save(update_fields=["is_booked"])
 
-            # آزادسازی Slot
-            slot.is_booked = False
-            slot.save(update_fields=["is_booked"])
+            if hasattr(payment, "mark_refunded") and callable(getattr(payment, "mark_refunded")):
+                payment.mark_refunded()
+            else:
+                if hasattr(Payment.Status, "REFUNDED"):
+                    payment.status = Payment.Status.REFUNDED
+                else:
+                    payment.status = Payment.Status.FAILED
+                payment.save(update_fields=["status"])
 
-            # بروزرسانی پرداخت
-            payment.status = Payment.Status.REFUNDED
-            payment.save(update_fields=["status"])
-
-        # اطلاع‌رسانی
         try:
             send_user_notification(
                 request.user,
                 "رزرو لغو شد و وجه بازگشت داده شد",
-                f"رزرو شما با {appointment.lawyer.user.get_full_name()} در {slot.start_time} لغو شد."
+                f"رزرو شما لغو شد."
             )
         except Exception as e:
             logger.warning("send_user_notification failed: %s", e)
@@ -219,9 +221,105 @@ class PaymentCancelView(generics.GenericAPIView):
         try:
             send_sms(
                 request.user.phone_number,
-                f"رزرو شما لغو شد و وجه بازگشت داده شد. وقت {slot.start_time} با {appointment.lawyer.user.get_full_name()} لغو شد."
+                f"رزرو شما لغو شد و وجه بازگشت داده شد."
             )
         except Exception as e:
             logger.warning("send_sms failed: %s", e)
 
         return Response({"detail": "Payment cancelled and appointment slot released."}, status=200)
+
+
+# ==============================
+# Subscription Payment Create
+# ==============================
+class CreateSubscriptionPaymentView(generics.CreateAPIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        if Subscription is None or AIPlan is None:
+            return Response({"detail": "Subscriptions are not enabled."}, status=404)
+
+        plan_id = request.data.get("plan_id")
+        payment_method = request.data.get("payment_method", "idpay")
+
+        try:
+            plan = AIPlan.objects.get(id=plan_id)
+        except AIPlan.DoesNotExist:
+            return Response({"detail": "Plan not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        sub = Subscription.objects.create(
+            user=request.user,
+            plan=plan,
+            active=False,
+            starts_at=timezone.now(),
+        )
+
+        payment_kwargs = {
+            "user": request.user,
+            "amount": Decimal(plan.price_cents) / Decimal(100) if getattr(plan, "price_cents", None) else Decimal("0"),
+            "payment_method": payment_method,
+            "status": Payment.Status.PENDING
+        }
+
+        if "subscription" in [f.name for f in Payment._meta.get_fields()]:
+            payment_kwargs["subscription_id"] = sub.id
+
+        payment = Payment.objects.create(**payment_kwargs)
+        payment_link = f"https://payment.gateway/pay/{payment.id}"
+
+        return Response({
+            "payment_id": payment.id,
+            "payment_link": payment_link,
+            "subscription_id": sub.id
+        }, status=status.HTTP_201_CREATED)
+
+
+# ==============================
+# Subscription Payment Callback
+# ==============================
+class PaymentCallbackView(generics.GenericAPIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request, *args, **kwargs):
+        payment_id = request.data.get("payment_id") or request.data.get("id")
+        status_received = request.data.get("status")
+
+        if not payment_id:
+            return Response({"detail": "payment_id required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            payment = Payment.objects.get(id=payment_id)
+        except Payment.DoesNotExist:
+            return Response({"detail": "Payment not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        if status_received == "completed":
+            if hasattr(payment, "mark_completed") and callable(getattr(payment, "mark_completed")):
+                payment.mark_completed(provider_data=request.data)
+            else:
+                payment.status = Payment.Status.COMPLETED
+                payment.provider_data = request.data
+                payment.save(update_fields=["status", "provider_data"])
+
+            sub = None
+            if Subscription is not None:
+                if hasattr(payment, "subscription"):
+                    sub = getattr(payment, "subscription")
+                else:
+                    sub_id = request.data.get("subscription_id") or (payment.provider_data or {}).get("subscription_id")
+                    if sub_id:
+                        sub = Subscription.objects.filter(id=sub_id).first()
+
+            if sub:
+                sub.active = True
+                plan = getattr(sub, "plan", None)
+                if plan:
+                    duration = getattr(plan, "duration", None) or getattr(plan, "duration_days", None)
+                    if isinstance(duration, int):
+                        sub.ends_at = timezone.now() + timedelta(days=int(duration))
+                sub.save()
+
+        elif status_received == "failed":
+            payment.status = Payment.Status.FAILED
+            payment.save(update_fields=["status"])
+
+        return Response({"status": payment.status}, status=200)

@@ -5,6 +5,7 @@ from users.models import User
 from appointments.models import Appointment
 from django.utils import timezone
 from decimal import Decimal
+from ai_assistant.models import Subscription
 
 class Payment(BaseModel):
     class Status(models.TextChoices):
@@ -12,7 +13,14 @@ class Payment(BaseModel):
         COMPLETED = 'completed', _('Completed')
         FAILED = 'failed', _('Failed')
         REFUNDED = 'refunded', _('Refunded')
-
+    
+    subscription = models.ForeignKey(
+        Subscription,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='payments'
+    )
     METHOD_CHOICES = [
         ("idpay", "IDPay"),
         ("zarinpal", "Zarinpal"),

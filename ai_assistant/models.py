@@ -1,5 +1,6 @@
 from django.db import models
 from django.conf import settings
+from django.utils import timezone
 
 class AIQuestion(models.Model):
     user = models.ForeignKey(
@@ -49,7 +50,30 @@ class AIUsage(models.Model):
 
     def __str__(self):
         return f"{self.user.email} - {self.date} - daily:{self.daily_count} monthly:{self.monthly_count}"
+    
+    def increment_usage(self):
+        """افزایش شمارش روزانه و ماهانه"""
+        self.daily_count += 1
+        self.monthly_count += 1
+        self.save()
 
+    @staticmethod
+    def get_or_create_today(user):
+        today = timezone.now().date()
+        usage, created = AIUsage.objects.get_or_create(
+            user=user,
+            date=today,
+            defaults={"daily_count": 0, "monthly_count": AIUsage.get_monthly_total(user)}
+        )
+        return usage
+
+    @staticmethod
+    def get_monthly_total(user):
+        month = timezone.now().month
+        year = timezone.now().year
+        return AIUsage.objects.filter(
+            user=user, date__month=month, date__year=year
+        ).aggregate(models.Sum("daily_count"))["daily_count__sum"] or 0
 
 # ------------ Plan & Subscription (اضافه‌شده برای محدودیت/اشتراک) -------------
 class AIPlan(models.Model):
@@ -75,3 +99,4 @@ class Subscription(models.Model):
 
     def __str__(self):
         return f"{self.user.email} -> {self.plan.name} (active={self.active})"
+    

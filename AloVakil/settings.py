@@ -271,3 +271,9 @@ AI_FREE_MONTHLY_LIMIT = 300
 AI_MAX_RETRIES = 3
 AI_RETRY_BACKOFF_SECONDS = 1
 AI_MODEL_NAME = "gpt-4o-mini"
+
+AI_LIMITS = {
+    "client": {"daily": 10, "monthly": 100},
+    "lawyer": {"daily": 30, "monthly": 300},
+    "default": {"daily": 5, "monthly": 50},
+}

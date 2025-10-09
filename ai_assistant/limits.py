@@ -5,24 +5,30 @@ from django.utils import timezone
 from .models import AIUsage, AIPlan, Subscription
 
 def get_active_plan_for_user(user):
-    # اگر کاربر دارای subscription فعال باشد برمی‌گردیم، در غیر این صورت None
+    """
+    بازگرداندن پلن فعال کاربر، اگر نداشته باشد پلن 'free' یا مقادیر پیش‌فرض settings
+    """
     sub = Subscription.objects.filter(user=user, active=True).order_by("-ends_at").first()
     if sub and sub.plan:
         return sub.plan
-    # fallback: اگر در DB یک plan با name='free' دارید از آن استفاده کن، وگرنه مقادیر defaults از settings
+
     plan = AIPlan.objects.filter(name__iexact="free").first()
     return plan
 
 def _get_limits_for_user(user):
+    """
+    بازگرداندن (daily_limit, monthly_limit) برای کاربر
+    """
     plan = get_active_plan_for_user(user)
     if plan:
         return plan.daily_limit, plan.monthly_limit
-    # default از settings
+
     return getattr(settings, "AI_FREE_DAILY_LIMIT", 10), getattr(settings, "AI_FREE_MONTHLY_LIMIT", 300)
 
 def can_user_ask(user, cost=1):
     """
-    برگرداندن tuple (allowed: bool, reason: Optional[str])
+    بررسی امکان ارسال سوال
+    بازگرداندن tuple: (allowed: bool, reason: Optional[str])
     reason می‌تواند 'daily' یا 'monthly' یا None باشد
     """
     if user.is_staff:
@@ -31,11 +37,11 @@ def can_user_ask(user, cost=1):
     daily_limit, monthly_limit = _get_limits_for_user(user)
     today = timezone.now().date()
 
-    # check daily
+    # بررسی مصرف روزانه
     usage = AIUsage.objects.filter(user=user, date=today).first()
     daily_count = usage.daily_count if usage else 0
 
-    # check monthly (جمع روزهای همان ماه)
+    # بررسی مصرف ماهانه
     month_total = AIUsage.objects.filter(
         user=user,
         date__year=today.year,
@@ -51,12 +57,15 @@ def can_user_ask(user, cost=1):
 
 def increment_usage(user, cost=1):
     """
-    افزایش شمارنده روزانه (و اختیاری monthly_count)
-    از select_for_update برای جلوگیری از race استفاده می‌شود
+    افزایش مصرف روزانه و ماهانه به صورت safe
     """
     today = timezone.now().date()
     with transaction.atomic():
-        usage, created = AIUsage.objects.select_for_update().get_or_create(user=user, date=today, defaults={"daily_count": 0, "monthly_count": 0})
+        usage, created = AIUsage.objects.select_for_update().get_or_create(
+            user=user, 
+            date=today, 
+            defaults={"daily_count": 0, "monthly_count": 0}
+        )
         usage.daily_count += cost
         usage.monthly_count += cost
         usage.save(update_fields=["daily_count", "monthly_count"])
