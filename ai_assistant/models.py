@@ -15,6 +15,7 @@ class AIQuestion(models.Model):
         null=True,
         help_text="نوع شخصیت یا نقش AI (مثلاً lawyer, educator, career)"
     )
+    importance = models.IntegerField(default=1, help_text="وزن یا اهمیت سوال برای memory")
     created_at = models.DateTimeField(auto_now_add=True)
     answered_at = models.DateTimeField(blank=True, null=True)
 
