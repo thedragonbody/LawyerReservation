@@ -85,7 +85,7 @@ class AIPlan(models.Model):
     monthly_limit = models.PositiveIntegerField(default=300)
     price_cents = models.PositiveIntegerField(default=0)  # قیمت در واحد کوچکتر (اختیاری)
     description = models.TextField(blank=True)
-
+    duration_days = models.PositiveBigIntegerField(default=30, help_text="مدت اعتبار اشتراک(روز)")
     def __str__(self):
         return f"{self.name} (daily:{self.daily_limit} monthly:{self.monthly_limit})"
 

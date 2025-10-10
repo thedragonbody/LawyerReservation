@@ -14,3 +14,7 @@ class AIQuestionSerializer(serializers.ModelSerializer):
         model = AIQuestion
         fields = ["id", "question", "answer", "persona", "created_at", "answered_at"]
         read_only_fields = ["id", "answer", "created_at", "answered_at"]
+
+class SubscriptionCreateSerializer(serializers.Serializer):
+    plan_id = serializers.IntegerField()
+    payment_method = serializers.ChoiceField(choices=[("idpay","idpay"),("zarinpal","zarinpal")], default="idpay")

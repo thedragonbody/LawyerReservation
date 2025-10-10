@@ -8,6 +8,7 @@ from django.utils import timezone
 from datetime import timedelta
 from decimal import Decimal
 import logging
+from ai_assistant.serializers import SubscriptionCreateSerializer
 
 from .models import Payment
 from .serializers import PaymentSerializer
@@ -232,21 +233,30 @@ class PaymentCancelView(generics.GenericAPIView):
 # ==============================
 # Subscription Payment Create
 # ==============================
-class CreateSubscriptionPaymentView(generics.CreateAPIView):
+class CreateSubscriptionPaymentView(generics.GenericAPIView):
     permission_classes = [IsAuthenticated]
+    serializer_class = SubscriptionCreateSerializer  # <<< مهم: رفع خطای AssertionError
+
+    def get(self, request, *args, **kwargs):
+        """
+        برگرداندن لیست پلن‌ها (Front-end برای نمایش انتخاب پلن استفاده می‌کند).
+        """
+        plans = AIPlan.objects.all().order_by("daily_limit")
+        data = [{"id": p.id, "name": p.name, "daily_limit": p.daily_limit, "monthly_limit": p.monthly_limit, "price_cents": p.price_cents} for p in plans]
+        return Response({"plans": data}, status=200)
 
     def post(self, request, *args, **kwargs):
-        if Subscription is None or AIPlan is None:
-            return Response({"detail": "Subscriptions are not enabled."}, status=404)
-
-        plan_id = request.data.get("plan_id")
-        payment_method = request.data.get("payment_method", "idpay")
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        plan_id = serializer.validated_data["plan_id"]
+        payment_method = serializer.validated_data.get("payment_method", "idpay")
 
         try:
             plan = AIPlan.objects.get(id=plan_id)
         except AIPlan.DoesNotExist:
             return Response({"detail": "Plan not found"}, status=status.HTTP_404_NOT_FOUND)
 
+        # create pending sub & payment (exact logic شبیه کدی که قبلاً گذاشتی)
         sub = Subscription.objects.create(
             user=request.user,
             plan=plan,
@@ -256,15 +266,17 @@ class CreateSubscriptionPaymentView(generics.CreateAPIView):
 
         payment_kwargs = {
             "user": request.user,
-            "amount": Decimal(plan.price_cents) / Decimal(100) if getattr(plan, "price_cents", None) else Decimal("0"),
+            "amount": Decimal(plan.price_cents) / Decimal(100) if getattr(plan, "price_cents", None) is not None else Decimal("0"),
             "payment_method": payment_method,
             "status": Payment.Status.PENDING
         }
-
         if "subscription" in [f.name for f in Payment._meta.get_fields()]:
             payment_kwargs["subscription_id"] = sub.id
 
         payment = Payment.objects.create(**payment_kwargs)
+        # callback واقعی برای درگاه:
+        callback_url = request.build_absolute_uri("/api/payments/subscription/payment-callback/")
+        # اگر میخوای لینک واقعی بگیری از create_payment_request استفاده کن، الان برای تست لینک محلی:
         payment_link = f"https://payment.gateway/pay/{payment.id}"
 
         return Response({
@@ -272,7 +284,6 @@ class CreateSubscriptionPaymentView(generics.CreateAPIView):
             "payment_link": payment_link,
             "subscription_id": sub.id
         }, status=status.HTTP_201_CREATED)
-
 
 # ==============================
 # Subscription Payment Callback
