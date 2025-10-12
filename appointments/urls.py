@@ -1,4 +1,4 @@
-from django.urls import path
+from django.urls import path, include
 from .views import AppointmentCreateView, AppointmentPaymentCallbackView
 
 urlpatterns = [
@@ -7,4 +7,7 @@ urlpatterns = [
 
     # Callback بعد از پرداخت موفق
     path('payment-callback/', AppointmentPaymentCallbackView.as_view(), name='appointment-payment-callback'),
+    
+    path('dashboard/', include('appointments.dashboard.urls')),
+
 ]
