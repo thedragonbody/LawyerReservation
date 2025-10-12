@@ -40,6 +40,7 @@ class DashboardStatsView(APIView):
 
     def get(self, request):
         user = request.user
+
         # -------------------------
         # تعیین queryset بر اساس نوع کاربر
         # -------------------------
@@ -61,6 +62,7 @@ class DashboardStatsView(APIView):
         min_price = request.GET.get('min_price')
         max_price = request.GET.get('max_price')
         payment_type = request.GET.get('payment_type')
+        sort_lawyer_by_appointments = request.GET.get('sort_lawyer', 'false').lower() == 'true'
 
         if start_date:
             try:
@@ -99,28 +101,32 @@ class DashboardStatsView(APIView):
             status_percent[s['status']] = round(s['count'] / total_appointments * 100, 2) if total_appointments else 0
 
         # -------------------------
-        # Trend جلسات روزانه (آخر 30 روز)
+        # Trend جلسات روزانه و نمودار درآمد (آخر 30 روز)
         # -------------------------
         today = now().date()
         last_30_days = [today - timedelta(days=i) for i in range(30)]
         daily_appointments = defaultdict(int)
         daily_revenue = defaultdict(Decimal)
-
         confirmed_qs = qs.filter(status='CONFIRMED')
+
         for day in last_30_days:
             daily_appointments[str(day)] = qs.filter(slot__start_time__date=day).count()
             daily_revenue[str(day)] = confirmed_qs.filter(slot__start_time__date=day).aggregate(
                 total=Sum('slot__price'))['total'] or Decimal(0)
 
         # -------------------------
-        # درصد موفقیت برای هر وکیل (برای مشتری)
+        # ۵ وکیل پربازدید و درصد موفقیت (برای مشتری)
         # -------------------------
         top_lawyers = []
         if hasattr(user, 'client_profile'):
             lawyer_counts = qs.values('lawyer__id', 'lawyer__user__first_name', 'lawyer__user__last_name') \
                               .annotate(total=Count('id'),
-                                        confirmed=Count('id', filter=Q(status='CONFIRMED'))) \
-                              .order_by('-total')[:5]
+                                        confirmed=Count('id', filter=Q(status='CONFIRMED')))
+            if sort_lawyer_by_appointments:
+                lawyer_counts = lawyer_counts.order_by('-total')[:5]
+            else:
+                lawyer_counts = lawyer_counts[:5]
+
             for lw in lawyer_counts:
                 percent_success = round(lw['confirmed'] / lw['total'] * 100, 2) if lw['total'] else 0
                 top_lawyers.append({
@@ -131,7 +137,7 @@ class DashboardStatsView(APIView):
                 })
 
         # -------------------------
-        # درصد موفقیت برای وکیل (جلسات خودش)
+        # ۵ مشتری پربازدید و درصد موفقیت (برای وکیل)
         # -------------------------
         top_clients = []
         if hasattr(user, 'lawyer_profile'):
@@ -139,6 +145,7 @@ class DashboardStatsView(APIView):
                               .annotate(total=Count('id'),
                                         confirmed=Count('id', filter=Q(status='CONFIRMED'))) \
                               .order_by('-total')[:5]
+
             for cl in client_counts:
                 percent_success = round(cl['confirmed'] / cl['total'] * 100, 2) if cl['total'] else 0
                 top_clients.append({
@@ -149,7 +156,7 @@ class DashboardStatsView(APIView):
                 })
 
         # -------------------------
-        # پاسخ JSON
+        # پاسخ JSON نهایی
         # -------------------------
         return Response({
             'total_appointments': total_appointments,
