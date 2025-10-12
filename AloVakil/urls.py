@@ -42,6 +42,8 @@ urlpatterns = [
         SpectacularRedocView.as_view(url_name="schema"),
         name="redoc",
     ),
+    
+
 ]
 
 # --- Static & Media (Dev mode only) ---

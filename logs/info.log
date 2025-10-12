@@ -1,0 +1,23 @@
+[2025-10-12 13:11:55,138] [INFO] [common] {"type": "request_start", "user": "allanlondon19452122@gmail.com", "method": "GET", "path": "/", "query_params": {}, "body": {}}
+[2025-10-12 13:11:55,152] [INFO] [common] {"type": "request_end", "user": "allanlondon19452122@gmail.com", "method": "GET", "path": "/", "status_code": 404}
+[2025-10-12 13:11:55,374] [INFO] [common] {"type": "request_start", "user": "allanlondon19452122@gmail.com", "method": "GET", "path": "/favicon.ico", "query_params": {}, "body": {}}
+[2025-10-12 13:11:55,377] [INFO] [common] {"type": "request_end", "user": "allanlondon19452122@gmail.com", "method": "GET", "path": "/favicon.ico", "status_code": 404}
+[2025-10-12 13:13:12,042] [INFO] [common] {"type": "request_start", "user": "allanlondon19452122@gmail.com", "method": "GET", "path": "/", "query_params": {}, "body": {}}
+[2025-10-12 13:13:12,045] [INFO] [common] {"type": "request_end", "user": "allanlondon19452122@gmail.com", "method": "GET", "path": "/", "status_code": 404}
+[2025-10-12 13:13:20,058] [INFO] [common] {"type": "request_start", "user": "allanlondon19452122@gmail.com", "method": "GET", "path": "/admin/", "query_params": {}, "body": {}}
+[2025-10-12 13:13:20,141] [INFO] [common] {"type": "request_end", "user": "allanlondon19452122@gmail.com", "method": "GET", "path": "/admin/", "status_code": 200}
+[2025-10-12 13:13:31,262] [INFO] [common] {"type": "request_start", "user": "allanlondon19452122@gmail.com", "method": "GET", "path": "/api/docs/", "query_params": {}, "body": {}}
+[2025-10-12 13:13:31,288] [INFO] [common] {"type": "request_end", "user": "allanlondon19452122@gmail.com", "method": "GET", "path": "/api/docs/", "status_code": 200}
+[2025-10-12 13:13:31,370] [INFO] [common] {"type": "request_start", "user": "allanlondon19452122@gmail.com", "method": "GET", "path": "/api/schema/", "query_params": {}, "body": {}}
+[2025-10-12 13:13:31,444] [INFO] [common] {"type": "request_end", "user": "allanlondon19452122@gmail.com", "method": "GET", "path": "/api/schema/", "status_code": 200}
+[2025-10-12 13:13:34,383] [INFO] [common] {"type": "request_start", "user": "allanlondon19452122@gmail.com", "method": "GET", "path": "/api/docs/", "query_params": {}, "body": {}}
+[2025-10-12 13:13:34,384] [INFO] [common] {"type": "request_end", "user": "allanlondon19452122@gmail.com", "method": "GET", "path": "/api/docs/", "status_code": 200}
+[2025-10-12 13:13:34,540] [INFO] [common] {"type": "request_start", "user": "allanlondon19452122@gmail.com", "method": "GET", "path": "/api/schema/", "query_params": {}, "body": {}}
+[2025-10-12 13:13:34,585] [INFO] [common] {"type": "request_end", "user": "allanlondon19452122@gmail.com", "method": "GET", "path": "/api/schema/", "status_code": 200}
+[2025-10-12 13:14:40,273] [INFO] [common] {"type": "request_start", "user": "allanlondon19452122@gmail.com", "method": "GET", "path": "/.well-known/appspecific/com.chrome.devtools.json", "query_params": {}, "body": {}}
+[2025-10-12 13:14:40,276] [INFO] [common] {"type": "request_end", "user": "allanlondon19452122@gmail.com", "method": "GET", "path": "/.well-known/appspecific/com.chrome.devtools.json", "status_code": 404}
+[2025-10-12 13:15:45,685] [INFO] [common] {"type": "request_start", "user": "allanlondon19452122@gmail.com", "method": "GET", "path": "/", "query_params": {}, "body": {}}
+[2025-10-12 13:15:45,689] [INFO] [common] {"type": "request_end", "user": "allanlondon19452122@gmail.com", "method": "GET", "path": "/", "status_code": 404}
+[2025-10-12 13:15:53,345] [INFO] [common] {"type": "request_start", "user": "allanlondon19452122@gmail.com", "method": "GET", "path": "/test-error/", "query_params": {}, "body": {}}
+[2025-10-12 13:15:53,346] [ERROR] [common] {"type": "exception", "user": "allanlondon19452122@gmail.com", "method": "GET", "path": "/test-error/", "query_params": {}, "body": {}, "exception": "division by zero", "traceback": "Traceback (most recent call last):\n  File \"E:\\Python\\Lib\\site-packages\\django\\core\\handlers\\base.py\", line 197, in _get_response\n    response = wrapped_callback(request, *callback_args, **callback_kwargs)\n  File \"E:\\2VAKIL\\AloVakil\\common\\views.py\", line 5, in test_error\n    1 / 0\n    ~~^~~\nZeroDivisionError: division by zero\n"}
+[2025-10-12 13:15:53,391] [INFO] [common] {"type": "request_end", "user": "allanlondon19452122@gmail.com", "method": "GET", "path": "/test-error/", "status_code": 500}

@@ -1,0 +1,12 @@
+[2025-10-12 13:15:53,346] [ERROR] [common] {"type": "exception", "user": "allanlondon19452122@gmail.com", "method": "GET", "path": "/test-error/", "query_params": {}, "body": {}, "exception": "division by zero", "traceback": "Traceback (most recent call last):\n  File \"E:\\Python\\Lib\\site-packages\\django\\core\\handlers\\base.py\", line 197, in _get_response\n    response = wrapped_callback(request, *callback_args, **callback_kwargs)\n  File \"E:\\2VAKIL\\AloVakil\\common\\views.py\", line 5, in test_error\n    1 / 0\n    ~~^~~\nZeroDivisionError: division by zero\n"}
+[2025-10-12 13:15:53,390] [ERROR] [django.request] Internal Server Error: /test-error/
+Traceback (most recent call last):
+  File "E:\Python\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "E:\Python\Lib\site-packages\django\core\handlers\base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "E:\2VAKIL\AloVakil\common\views.py", line 5, in test_error
+    1 / 0
+    ~~^~~
+ZeroDivisionError: division by zero
+[2025-10-12 13:15:53,392] [ERROR] [django.server] "GET /test-error/ HTTP/1.1" 500 76849

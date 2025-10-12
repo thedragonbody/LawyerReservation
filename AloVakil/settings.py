@@ -9,16 +9,15 @@ from pathlib import Path
 import environ
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+BASE_DIR = Path(__file__).resolve().parent.parent
 
-FIREBASE_CREDENTIALS_JSON = os.path.join(BASE_DIR, "config", "firebase.json")  # اگر از os.path استفاده میکنی
+FIREBASE_CREDENTIALS_JSON = BASE_DIR / "config" / "firebase.json"
 
 env = environ.Env(
     DEBUG=(bool, False)
 )
-
 # خواندن .env از BASE_DIR
-environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
+environ.Env.read_env(BASE_DIR / '.env')
 
 SECRET_KEY = env('SECRET_KEY')
 DEBUG = env.bool('DEBUG', default=False)
@@ -43,25 +42,14 @@ DATABASES = {
         'PORT': env.str("DB_PORT", default='5432'),
     }
 }
-MEDIA_URL = '/media/'  # URL برای دسترسی به فایل‌ها
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
-
-# Quick-start development settings - unsuitable for production
-
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
 
 ALLOWED_HOSTS = []
 
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",  
+    "http://localhost:3000",
 ]
-
-ASGI_APPLICATION = "AloVakil.asgi.application"
-CHANNEL_LAYERS = {
-    "default": {
-        "BACKEND": "channels_redis.core.RedisChannelLayer",
-        "CONFIG": {"hosts": [("127.0.0.1", 6379)]},
-    },
-}
 
 # Application definition
 INSTALLED_APPS = [
@@ -92,72 +80,22 @@ INSTALLED_APPS = [
     'categories',
     'rating_and_reviews',
     'ai_assistant',
-    
 ]
-
-REST_FRAMEWORK = {
-    # Authentication رو مطابق پروژه تنظیم کن (نمونه با Simple JWT)
-    'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
-        'rest_framework.authentication.SessionAuthentication',  # در صورت نیاز
-    ),
-    'DEFAULT_PERMISSION_CLASSES': (
-        'rest_framework.permissions.IsAuthenticated',  # پیش‌فرض؛ اگر می‌خواهی docs عمومی باشد، می‌توانی AllowAny تنظیم کنی
-    ),
-    # استفاده از drf-spectacular برای تولید schema
-    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
-    # (در صورت استفاده از pagination پیش‌فرض)
-    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
-    'PAGE_SIZE': 10,
-}
-
-SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15),
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
-    'ROTATE_REFRESH_TOKENS': False,
-    'BLACKLIST_AFTER_ROTATION': True,
-}
-
-
-SPECTACULAR_SETTINGS = {
-    'TITLE': 'AloVakil API',
-    'DESCRIPTION': 'API documentation for AloVakil (MVP)',
-    'VERSION': '1.0.0',
-    # اضافه کردن پشتیبانی از Bearer JWT در docs
-    'SECURITY': [{'BearerAuth': []}],
-    'COMPONENT_SPLIT_REQUEST': True,
-    'CONTACT': {
-        'name': 'AloVakil Team',
-        'email': 'no-reply@alovakil.com'
-    },
-    'SERVERS': [
-        {'url': 'http://localhost:8000', 'description': 'Local dev'}
-    ],
-    'SWAGGER_UI_SETTINGS': {
-        'deepLinking': True,
-    },
-    'SWAGGER_UI_DIST': 'https://cdn.jsdelivr.net/npm/swagger-ui-dist@3.52.5',  # optional
-    'MARSHmallow': False,
-    'SCHEMA_PATH_PREFIX': r'/api',  # اگر API ها همگی با /api/ شروع می‌شوند
-    'SECURITY_SCHEMES': {
-        'BearerAuth': {
-            'type': 'http',
-            'scheme': 'bearer',
-            'bearerFormat': 'JWT',
-        },
-    },
-}
-
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
-    "corsheaders.middleware.CorsMiddleware",   # ← بهتره این قبل از CommonMiddleware باشه
+    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+]
+
+# Global Exception Logging
+MIDDLEWARE += [
+    "common.middleware.GlobalRequestLoggingMiddleware",
 ]
 
 ROOT_URLCONF = "AloVakil.urls"
@@ -178,8 +116,7 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = "AloVakil.wsgi.application"
-
-
+ASGI_APPLICATION = "AloVakil.asgi.application"
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
@@ -189,45 +126,35 @@ AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
 
-
 # Internationalization
 LANGUAGE_CODE = "en-us"
 TIME_ZONE = "UTC"
 USE_I18N = True
 USE_TZ = True
 
-
-# Static files (CSS, JavaScript, Images)
+# Static files
 STATIC_URL = "static/"
-
-# Default primary key field type
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # Custom user model
 AUTH_USER_MODEL = "users.User"
 
-
-#Email sets
-
+# Email
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 
-
+# Channels
 USE_INMEMORY = os.getenv("USE_INMEMORY_CHANNEL_LAYER", "true").lower() == "true"
 
 if USE_INMEMORY:
-    # برای توسعه لوکال بدون Redis
     CHANNEL_LAYERS = {
-        "default": {
-            "BACKEND": "channels.layers.InMemoryChannelLayer",
-        }
+        "default": {"BACKEND": "channels.layers.InMemoryChannelLayer"}
     }
 else:
-    # برای وقتی Redis راه‌اندازی شد
     CHANNEL_LAYERS = {
         "default": {
             "BACKEND": "channels_redis.core.RedisChannelLayer",
             "CONFIG": {"hosts": [("127.0.0.1", 6379)]},
-        },
+        }
     }
 
 SMS_SENDER = "1000596446"
@@ -254,16 +181,7 @@ CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 
-ASGI_APPLICATION = "AloVakil.asgi.application"
-
-# اگر می‌خوای روی Redis باشه (production / real-time)
-CHANNEL_LAYERS = {
-    "default": {
-        "BACKEND": "channels_redis.core.RedisChannelLayer",
-        "CONFIG": {"hosts": [("127.0.0.1", 6379)]},  # یا REDIS_URL از env
-    }
-}
-
+# AI
 OPENAI_API_KEY = "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"
 
 AI_FREE_DAILY_LIMIT = 10
@@ -276,4 +194,74 @@ AI_LIMITS = {
     "client": {"daily": 10, "monthly": 100},
     "lawyer": {"daily": 30, "monthly": 300},
     "default": {"daily": 5, "monthly": 50},
+}
+
+# REST Framework
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
+    ),
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.IsAuthenticated',
+    ),
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 10,
+}
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    'ROTATE_REFRESH_TOKENS': False,
+    'BLACKLIST_AFTER_ROTATION': True,
+}
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'AloVakil API',
+    'DESCRIPTION': 'API documentation for AloVakil (MVP)',
+    'VERSION': '1.0.0',
+    'SECURITY': [{'BearerAuth': []}],
+    'COMPONENT_SPLIT_REQUEST': True,
+    'CONTACT': {'name': 'AloVakil Team', 'email': 'no-reply@alovakil.com'},
+    'SERVERS': [{'url': 'http://localhost:8000', 'description': 'Local dev'}],
+    'SWAGGER_UI_SETTINGS': {'deepLinking': True},
+    'SWAGGER_UI_DIST': 'https://cdn.jsdelivr.net/npm/swagger-ui-dist@3.52.5',
+    'MARSHmallow': False,
+    'SCHEMA_PATH_PREFIX': r'/api',
+    'SECURITY_SCHEMES': {
+        'BearerAuth': {'type': 'http', 'scheme': 'bearer', 'bearerFormat': 'JWT'},
+    },
+}
+
+# ===============================
+# 📜 Centralized Logging Config
+# ===============================
+LOG_DIR = BASE_DIR / "logs"
+LOG_DIR.mkdir(exist_ok=True)
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "verbose": {"format": "[{asctime}] [{levelname}] [{name}] {message}", "style": "{"},
+        "simple": {"format": "[{levelname}] {message}", "style": "{"},
+        "json": {"format": '{{"time": "{asctime}", "level": "{levelname}", "logger": "{name}", "msg": "{message}"}}', "style": "{"},
+    },
+    "handlers": {
+        "console": {"class": "logging.StreamHandler", "formatter": "simple"},
+        "file_info": {"class": "logging.FileHandler", "filename": LOG_DIR / "info.log", "formatter": "verbose", "level": "INFO"},
+        "file_error": {"class": "logging.FileHandler", "filename": LOG_DIR / "errors.log", "formatter": "verbose", "level": "ERROR"},
+    },
+    "loggers": {
+        "django": {"handlers": ["console", "file_error"], "level": "WARNING", "propagate": True},
+        "common": {"handlers": ["console", "file_info", "file_error"], "level": "INFO", "propagate": False},
+        "notifications": {"handlers": ["console", "file_info", "file_error"], "level": "INFO", "propagate": False},
+        "payments": {"handlers": ["console", "file_info", "file_error"], "level": "INFO", "propagate": False},
+        "appointments": {"handlers": ["console", "file_info", "file_error"], "level": "INFO", "propagate": False},
+        "chat": {"handlers": ["console", "file_info", "file_error"], "level": "INFO", "propagate": False},
+        "users": {"handlers": ["console", "file_info", "file_error"], "level": "INFO", "propagate": False},
+        "searchs": {"handlers": ["console", "file_info", "file_error"], "level": "INFO", "propagate": False},
+        "ai_assistant": {"handlers": ["console", "file_info", "file_error"], "level": "INFO", "propagate": False},
+    },
 }
