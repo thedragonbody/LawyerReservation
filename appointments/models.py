@@ -6,6 +6,9 @@ from common.choices import AppointmentStatus, SessionType
 from common.validators import validate_slot_time
 from decimal import Decimal
 from django.core.exceptions import ObjectDoesNotExist
+from appointments.utils import create_meeting_link
+from notifications.models import Notification
+from common.utils import send_sms
 
 class Slot(BaseModel):
     lawyer = models.ForeignKey(LawyerProfile, on_delete=models.CASCADE, related_name='slots')
@@ -46,44 +49,78 @@ class Appointment(BaseModel):
     # -----------------------------
     # Helper methods for state changes
     # -----------------------------
+
+
     def confirm(self, transaction_id: str = None) -> bool:
         """
         Confirm this appointment atomically:
         - Locks the related slot row to avoid race conditions
         - Marks slot.is_booked = True (if not already booked)
-        - Sets appointment.status = CONFIRMED (if it was not already)
+        - Sets appointment.status = CONFIRMED
         - Optionally sets transaction_id
+        - Creates an online meeting link ONLY if session_type == ONLINE
+        - Sends notification & SMS if applicable
         Returns True if a state change occurred (i.e. was confirmed now), False if already confirmed.
         """
-        from django.db.models import F
-
-        # Quick guard: if already confirmed, do nothing
+        # 🧩 اگر از قبل تأیید شده باشد، هیچ کاری نکن
         if self.status == AppointmentStatus.CONFIRMED:
             return False
 
-        # Do everything in a transaction and lock the slot row
         with transaction.atomic():
-            # reload slot with SELECT ... FOR UPDATE
+            # 🔒 قفل‌کردن Slot برای جلوگیری از رزرو هم‌زمان
             slot_qs = type(self.slot).objects.select_for_update().filter(pk=self.slot.pk)
             try:
                 slot = slot_qs.get()
             except ObjectDoesNotExist:
                 raise
 
-            # If slot already booked by some other flow, still we set appointment accordingly if appropriate
+            # 📅 اگر هنوز رزرو نشده، رزروش کن
             if not slot.is_booked:
                 slot.is_booked = True
                 slot.save(update_fields=["is_booked"])
 
-            # Update appointment only if not already confirmed
+            # 🔁 تغییر وضعیت به Confirmed فقط در صورت نیاز
             if self.status != AppointmentStatus.CONFIRMED:
                 self.status = AppointmentStatus.CONFIRMED
+                fields_to_update = ["status"]
+
+                # 💳 ثبت شماره تراکنش در صورت وجود
                 if transaction_id:
                     self.transaction_id = transaction_id
-                    self.save(update_fields=["status", "transaction_id"])
-                else:
-                    self.save(update_fields=["status"])
-            return True
+                    fields_to_update.append("transaction_id")
+
+                # 💻 ساخت لینک فقط برای جلسات آنلاین
+                if self.session_type == SessionType.ONLINE:
+                    self.online_link = create_meeting_link(self)
+                    fields_to_update.append("online_link")
+
+                # 💾 ذخیره تغییرات
+                self.save(update_fields=fields_to_update)
+
+        # 🚀 پس از commit، ارسال نوتیف و پیامک (خارج از transaction)
+        if self.session_type == SessionType.ONLINE and self.online_link:
+            try:
+                # 📲 ایجاد نوتیف در سیستم
+                Notification.objects.create(
+                    user=self.client.user,
+                    appointment=self,
+                    title="لینک جلسه آنلاین شما آماده است",
+                    message=f"جلسه شما با {self.lawyer.user.get_full_name()} تأیید شد.\n"
+                            f"لینک ورود: {self.online_link}"
+                )
+
+                # 📤 ارسال پیامک برای کاربر
+                send_sms(
+                    self.client.user.phone_number,
+                    f"جلسه آنلاین شما با {self.lawyer.user.get_full_name()} تأیید شد.\n"
+                    f"لینک ورود: {self.online_link}"
+                )
+            except Exception as e:
+                # از شکست ارسال پیامک جلوگیری می‌کنیم تا تراکنش تأیید نشود
+                print(f"[Warning] Failed to send notification or SMS: {e}")
+
+        return True
+        
 
     def cancel(self, cancellation_reason: str = None, refund: bool = False) -> bool:
         """

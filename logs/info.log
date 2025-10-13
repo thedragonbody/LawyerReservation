@@ -21,3 +21,53 @@
 [2025-10-12 13:15:53,345] [INFO] [common] {"type": "request_start", "user": "allanlondon19452122@gmail.com", "method": "GET", "path": "/test-error/", "query_params": {}, "body": {}}
 [2025-10-12 13:15:53,346] [ERROR] [common] {"type": "exception", "user": "allanlondon19452122@gmail.com", "method": "GET", "path": "/test-error/", "query_params": {}, "body": {}, "exception": "division by zero", "traceback": "Traceback (most recent call last):\n  File \"E:\\Python\\Lib\\site-packages\\django\\core\\handlers\\base.py\", line 197, in _get_response\n    response = wrapped_callback(request, *callback_args, **callback_kwargs)\n  File \"E:\\2VAKIL\\AloVakil\\common\\views.py\", line 5, in test_error\n    1 / 0\n    ~~^~~\nZeroDivisionError: division by zero\n"}
 [2025-10-12 13:15:53,391] [INFO] [common] {"type": "request_end", "user": "allanlondon19452122@gmail.com", "method": "GET", "path": "/test-error/", "status_code": 500}
+[2025-10-13 17:56:48,153] [INFO] [common] {"type": "request_start", "user": "allanlondon19452122@gmail.com", "method": "GET", "path": "/", "query_params": {}, "body": {}}
+[2025-10-13 17:56:48,167] [INFO] [common] {"type": "request_end", "user": "allanlondon19452122@gmail.com", "method": "GET", "path": "/", "status_code": 404}
+[2025-10-13 17:56:48,395] [INFO] [common] {"type": "request_start", "user": "allanlondon19452122@gmail.com", "method": "GET", "path": "/favicon.ico", "query_params": {}, "body": {}}
+[2025-10-13 17:56:48,398] [INFO] [common] {"type": "request_end", "user": "allanlondon19452122@gmail.com", "method": "GET", "path": "/favicon.ico", "status_code": 404}
+[2025-10-13 17:56:50,047] [INFO] [common] {"type": "request_start", "user": "allanlondon19452122@gmail.com", "method": "GET", "path": "/", "query_params": {}, "body": {}}
+[2025-10-13 17:56:50,050] [INFO] [common] {"type": "request_end", "user": "allanlondon19452122@gmail.com", "method": "GET", "path": "/", "status_code": 404}
+[2025-10-13 17:57:10,548] [INFO] [common] {"type": "request_start", "user": "allanlondon19452122@gmail.com", "method": "GET", "path": "/categories/", "query_params": {}, "body": {}}
+[2025-10-13 17:57:10,676] [INFO] [common] {"type": "request_end", "user": "allanlondon19452122@gmail.com", "method": "GET", "path": "/categories/", "status_code": 200}
+[2025-10-13 18:05:12,879] [INFO] [common] {"type": "request_start", "user": "allanlondon19452122@gmail.com", "method": "GET", "path": "/", "query_params": {}, "body": {}}
+[2025-10-13 18:05:12,882] [INFO] [common] {"type": "request_end", "user": "allanlondon19452122@gmail.com", "method": "GET", "path": "/", "status_code": 404}
+[2025-10-13 18:05:14,181] [INFO] [common] {"type": "request_start", "user": "allanlondon19452122@gmail.com", "method": "GET", "path": "/", "query_params": {}, "body": {}}
+[2025-10-13 18:05:14,183] [INFO] [common] {"type": "request_end", "user": "allanlondon19452122@gmail.com", "method": "GET", "path": "/", "status_code": 404}
+[2025-10-13 18:05:55,770] [INFO] [common] {"type": "request_start", "user": "allanlondon19452122@gmail.com", "method": "GET", "path": "/appointments/slots/", "query_params": {}, "body": {}}
+[2025-10-13 18:05:55,773] [INFO] [common] {"type": "request_end", "user": "allanlondon19452122@gmail.com", "method": "GET", "path": "/appointments/slots/", "status_code": 404}
+[2025-10-13 18:06:05,607] [INFO] [common] {"type": "request_start", "user": "allanlondon19452122@gmail.com", "method": "GET", "path": "/appointments/ dashboard/", "query_params": {}, "body": {}}
+[2025-10-13 18:06:05,610] [INFO] [common] {"type": "request_end", "user": "allanlondon19452122@gmail.com", "method": "GET", "path": "/appointments/ dashboard/", "status_code": 404}
+[2025-10-13 18:06:19,009] [INFO] [common] {"type": "request_start", "user": "allanlondon19452122@gmail.com", "method": "GET", "path": "/appointments/dashboard/", "query_params": {}, "body": {}}
+[2025-10-13 18:06:19,012] [INFO] [common] {"type": "request_end", "user": "allanlondon19452122@gmail.com", "method": "GET", "path": "/appointments/dashboard/", "status_code": 404}
+[2025-10-13 18:06:29,944] [INFO] [common] {"type": "request_start", "user": "allanlondon19452122@gmail.com", "method": "GET", "path": "/appointments/dashboard/stats/", "query_params": {}, "body": {}}
+[2025-10-13 18:06:30,007] [INFO] [common] {"type": "request_end", "user": "allanlondon19452122@gmail.com", "method": "GET", "path": "/appointments/dashboard/stats/", "status_code": 200}
+[2025-10-13 18:17:29,035] [INFO] [common] {"type": "request_start", "user": "allanlondon19452122@gmail.com", "method": "GET", "path": "/appointments/ dashboard/ lawyer/", "query_params": {}, "body": {}}
+[2025-10-13 18:17:29,038] [INFO] [common] {"type": "request_end", "user": "allanlondon19452122@gmail.com", "method": "GET", "path": "/appointments/ dashboard/ lawyer/", "status_code": 404}
+[2025-10-13 18:17:54,171] [INFO] [common] {"type": "request_start", "user": "allanlondon19452122@gmail.com", "method": "GET", "path": "/appointments/dashboard/lawyer/", "query_params": {}, "body": {}}
+[2025-10-13 18:17:54,182] [INFO] [common] {"type": "request_end", "user": "allanlondon19452122@gmail.com", "method": "GET", "path": "/appointments/dashboard/lawyer/", "status_code": 200}
+[2025-10-13 19:41:41,526] [INFO] [common] {"type": "request_start", "user": "allanlondon19452122@gmail.com", "method": "GET", "path": "/", "query_params": {}, "body": {}}
+[2025-10-13 19:41:41,531] [INFO] [common] {"type": "request_end", "user": "allanlondon19452122@gmail.com", "method": "GET", "path": "/", "status_code": 404}
+[2025-10-13 19:41:43,961] [INFO] [common] {"type": "request_start", "user": "allanlondon19452122@gmail.com", "method": "GET", "path": "/", "query_params": {}, "body": {}}
+[2025-10-13 19:41:43,964] [INFO] [common] {"type": "request_end", "user": "allanlondon19452122@gmail.com", "method": "GET", "path": "/", "status_code": 404}
+[2025-10-13 19:41:46,110] [INFO] [common] {"type": "request_start", "user": "allanlondon19452122@gmail.com", "method": "GET", "path": "/", "query_params": {}, "body": {}}
+[2025-10-13 19:41:46,112] [INFO] [common] {"type": "request_end", "user": "allanlondon19452122@gmail.com", "method": "GET", "path": "/", "status_code": 404}
+[2025-10-13 19:41:47,248] [INFO] [common] {"type": "request_start", "user": "allanlondon19452122@gmail.com", "method": "GET", "path": "/", "query_params": {}, "body": {}}
+[2025-10-13 19:41:47,250] [INFO] [common] {"type": "request_end", "user": "allanlondon19452122@gmail.com", "method": "GET", "path": "/", "status_code": 404}
+[2025-10-13 19:41:47,925] [INFO] [common] {"type": "request_start", "user": "allanlondon19452122@gmail.com", "method": "GET", "path": "/", "query_params": {}, "body": {}}
+[2025-10-13 19:41:47,928] [INFO] [common] {"type": "request_end", "user": "allanlondon19452122@gmail.com", "method": "GET", "path": "/", "status_code": 404}
+[2025-10-13 19:41:48,679] [INFO] [common] {"type": "request_start", "user": "allanlondon19452122@gmail.com", "method": "GET", "path": "/", "query_params": {}, "body": {}}
+[2025-10-13 19:41:48,682] [INFO] [common] {"type": "request_end", "user": "allanlondon19452122@gmail.com", "method": "GET", "path": "/", "status_code": 404}
+[2025-10-13 19:41:48,916] [INFO] [common] {"type": "request_start", "user": "allanlondon19452122@gmail.com", "method": "GET", "path": "/", "query_params": {}, "body": {}}
+[2025-10-13 19:41:48,919] [INFO] [common] {"type": "request_end", "user": "allanlondon19452122@gmail.com", "method": "GET", "path": "/", "status_code": 404}
+[2025-10-13 19:41:49,374] [INFO] [common] {"type": "request_start", "user": "allanlondon19452122@gmail.com", "method": "GET", "path": "/", "query_params": {}, "body": {}}
+[2025-10-13 19:41:49,376] [INFO] [common] {"type": "request_end", "user": "allanlondon19452122@gmail.com", "method": "GET", "path": "/", "status_code": 404}
+[2025-10-13 19:41:49,838] [INFO] [common] {"type": "request_start", "user": "allanlondon19452122@gmail.com", "method": "GET", "path": "/", "query_params": {}, "body": {}}
+[2025-10-13 19:41:49,841] [INFO] [common] {"type": "request_end", "user": "allanlondon19452122@gmail.com", "method": "GET", "path": "/", "status_code": 404}
+[2025-10-13 19:41:50,366] [INFO] [common] {"type": "request_start", "user": "allanlondon19452122@gmail.com", "method": "GET", "path": "/", "query_params": {}, "body": {}}
+[2025-10-13 19:41:50,369] [INFO] [common] {"type": "request_end", "user": "allanlondon19452122@gmail.com", "method": "GET", "path": "/", "status_code": 404}
+[2025-10-13 19:41:50,806] [INFO] [common] {"type": "request_start", "user": "allanlondon19452122@gmail.com", "method": "GET", "path": "/", "query_params": {}, "body": {}}
+[2025-10-13 19:41:50,809] [INFO] [common] {"type": "request_end", "user": "allanlondon19452122@gmail.com", "method": "GET", "path": "/", "status_code": 404}
+[2025-10-13 19:41:52,231] [INFO] [common] {"type": "request_start", "user": "allanlondon19452122@gmail.com", "method": "GET", "path": "/", "query_params": {}, "body": {}}
+[2025-10-13 19:41:52,234] [INFO] [common] {"type": "request_end", "user": "allanlondon19452122@gmail.com", "method": "GET", "path": "/", "status_code": 404}
+[2025-10-13 19:49:29,179] [INFO] [common] {"type": "request_start", "user": "allanlondon19452122@gmail.com", "method": "GET", "path": "/appointments/dashboard/lawyer/", "query_params": {}, "body": {}}
+[2025-10-13 19:49:29,215] [INFO] [common] {"type": "request_end", "user": "allanlondon19452122@gmail.com", "method": "GET", "path": "/appointments/dashboard/lawyer/", "status_code": 200}

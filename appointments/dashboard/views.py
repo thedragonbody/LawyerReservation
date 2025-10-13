@@ -35,6 +35,16 @@ class LawyerDashboardView(generics.ListAPIView):
 # -------------------------
 # آمار و نمودارهای داشبورد با فیلتر پیشرفته
 # -------------------------
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+from appointments.models import Appointment
+from django.db.models import Count, Sum, Q
+from django.utils.timezone import now, timedelta
+from collections import defaultdict
+from decimal import Decimal
+from datetime import datetime
+
 class DashboardStatsView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -62,7 +72,8 @@ class DashboardStatsView(APIView):
         min_price = request.GET.get('min_price')
         max_price = request.GET.get('max_price')
         payment_type = request.GET.get('payment_type')
-        sort_lawyer_by_appointments = request.GET.get('sort_lawyer', 'false').lower() == 'true'
+        sort_by = request.GET.get('sort_by')  # appointments | success_percent | revenue
+        order = request.GET.get('order', 'desc')  # asc | desc
 
         if start_date:
             try:
@@ -70,14 +81,12 @@ class DashboardStatsView(APIView):
                 qs = qs.filter(slot__start_time__date__gte=start_date_obj)
             except ValueError:
                 pass
-
         if end_date:
             try:
                 end_date_obj = datetime.fromisoformat(end_date).date()
                 qs = qs.filter(slot__start_time__date__lte=end_date_obj)
             except ValueError:
                 pass
-
         if status:
             qs = qs.filter(status=status.upper())
         if lawyer_id:
@@ -96,9 +105,8 @@ class DashboardStatsView(APIView):
         # -------------------------
         total_appointments = qs.count()
         status_counts = qs.values('status').annotate(count=Count('id'))
-        status_percent = {}
-        for s in status_counts:
-            status_percent[s['status']] = round(s['count'] / total_appointments * 100, 2) if total_appointments else 0
+        status_percent = {s['status']: round(s['count'] / total_appointments * 100, 2) if total_appointments else 0
+                          for s in status_counts}
 
         # -------------------------
         # Trend جلسات روزانه و نمودار درآمد (آخر 30 روز)
@@ -122,18 +130,24 @@ class DashboardStatsView(APIView):
             lawyer_counts = qs.values('lawyer__id', 'lawyer__user__first_name', 'lawyer__user__last_name') \
                               .annotate(total=Count('id'),
                                         confirmed=Count('id', filter=Q(status='CONFIRMED')))
-            if sort_lawyer_by_appointments:
-                lawyer_counts = lawyer_counts.order_by('-total')[:5]
-            else:
-                lawyer_counts = lawyer_counts[:5]
 
+            # محاسبه درصد موفقیت
             for lw in lawyer_counts:
-                percent_success = round(lw['confirmed'] / lw['total'] * 100, 2) if lw['total'] else 0
+                lw['success_percent'] = round(lw['confirmed'] / lw['total'] * 100, 2) if lw['total'] else 0
+
+            # مرتب‌سازی پویا
+            if sort_by == 'appointments':
+                lawyer_counts = sorted(lawyer_counts, key=lambda x: x['total'], reverse=(order=='desc'))
+            elif sort_by == 'success_percent':
+                lawyer_counts = sorted(lawyer_counts, key=lambda x: x['success_percent'], reverse=(order=='desc'))
+
+            lawyer_counts = lawyer_counts[:5]
+            for lw in lawyer_counts:
                 top_lawyers.append({
                     'id': lw['lawyer__id'],
                     'name': f"{lw['lawyer__user__first_name']} {lw['lawyer__user__last_name']}",
                     'appointments': lw['total'],
-                    'success_percent': percent_success
+                    'success_percent': lw['success_percent']
                 })
 
         # -------------------------
@@ -143,17 +157,42 @@ class DashboardStatsView(APIView):
         if hasattr(user, 'lawyer_profile'):
             client_counts = qs.values('client__id', 'client__user__first_name', 'client__user__last_name') \
                               .annotate(total=Count('id'),
-                                        confirmed=Count('id', filter=Q(status='CONFIRMED'))) \
-                              .order_by('-total')[:5]
+                                        confirmed=Count('id', filter=Q(status='CONFIRMED')))
 
             for cl in client_counts:
-                percent_success = round(cl['confirmed'] / cl['total'] * 100, 2) if cl['total'] else 0
+                cl['success_percent'] = round(cl['confirmed'] / cl['total'] * 100, 2) if cl['total'] else 0
+
+            if sort_by == 'appointments':
+                client_counts = sorted(client_counts, key=lambda x: x['total'], reverse=(order=='desc'))
+            elif sort_by == 'success_percent':
+                client_counts = sorted(client_counts, key=lambda x: x['success_percent'], reverse=(order=='desc'))
+
+            client_counts = client_counts[:5]
+            for cl in client_counts:
                 top_clients.append({
                     'id': cl['client__id'],
                     'name': f"{cl['client__user__first_name']} {cl['client__user__last_name']}",
                     'appointments': cl['total'],
-                    'success_percent': percent_success
+                    'success_percent': cl['success_percent']
                 })
+
+        # -------------------------
+        # گزارش مالی ماهانه (ویژه وکلا)
+        # -------------------------
+        monthly_income = {}
+        monthly_sessions = {}
+        if hasattr(user, 'lawyer_profile'):
+            financial_qs = qs.filter(status__in=['CONFIRMED', 'COMPLETED'])
+            if payment_type:
+                financial_qs = financial_qs.filter(payment__payment_method__iexact=payment_type)
+
+            for appt in financial_qs:
+                month_key = appt.slot.start_time.strftime('%Y-%m')
+                monthly_income[month_key] = monthly_income.get(month_key, Decimal(0)) + appt.slot.price
+                monthly_sessions[month_key] = monthly_sessions.get(month_key, 0) + 1
+
+            monthly_income = dict(sorted(monthly_income.items()))
+            monthly_sessions = dict(sorted(monthly_sessions.items()))
 
         # -------------------------
         # پاسخ JSON نهایی
@@ -165,5 +204,7 @@ class DashboardStatsView(APIView):
             'daily_appointments': dict(daily_appointments),
             'daily_revenue': dict(daily_revenue),
             'top_lawyers': top_lawyers,
-            'top_clients': top_clients
+            'top_clients': top_clients,
+            'monthly_income': monthly_income,
+            'monthly_sessions': monthly_sessions,
         })
