@@ -35,15 +35,10 @@ class LawyerDashboardView(generics.ListAPIView):
 # -------------------------
 # آمار و نمودارهای داشبورد با فیلتر پیشرفته
 # -------------------------
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
-from appointments.models import Appointment
-from django.db.models import Count, Sum, Q
-from django.utils.timezone import now, timedelta
-from collections import defaultdict
-from decimal import Decimal
-from datetime import datetime
+
+def calculate_tax(amount: Decimal) -> Decimal:
+    # مثال: مالیات ثابت 10٪
+    return amount * Decimal('0.10')
 
 class DashboardStatsView(APIView):
     permission_classes = [IsAuthenticated]
@@ -130,12 +125,9 @@ class DashboardStatsView(APIView):
             lawyer_counts = qs.values('lawyer__id', 'lawyer__user__first_name', 'lawyer__user__last_name') \
                               .annotate(total=Count('id'),
                                         confirmed=Count('id', filter=Q(status='CONFIRMED')))
-
-            # محاسبه درصد موفقیت
             for lw in lawyer_counts:
                 lw['success_percent'] = round(lw['confirmed'] / lw['total'] * 100, 2) if lw['total'] else 0
 
-            # مرتب‌سازی پویا
             if sort_by == 'appointments':
                 lawyer_counts = sorted(lawyer_counts, key=lambda x: x['total'], reverse=(order=='desc'))
             elif sort_by == 'success_percent':
@@ -158,7 +150,6 @@ class DashboardStatsView(APIView):
             client_counts = qs.values('client__id', 'client__user__first_name', 'client__user__last_name') \
                               .annotate(total=Count('id'),
                                         confirmed=Count('id', filter=Q(status='CONFIRMED')))
-
             for cl in client_counts:
                 cl['success_percent'] = round(cl['confirmed'] / cl['total'] * 100, 2) if cl['total'] else 0
 
@@ -177,10 +168,14 @@ class DashboardStatsView(APIView):
                 })
 
         # -------------------------
-        # گزارش مالی ماهانه (ویژه وکلا)
+        # گزارش مالی ماهانه و مالیات (ویژه وکلا)
         # -------------------------
         monthly_income = {}
         monthly_sessions = {}
+        monthly_tax = {}
+        annual_income = Decimal(0)
+        annual_tax = Decimal(0)
+
         if hasattr(user, 'lawyer_profile'):
             financial_qs = qs.filter(status__in=['CONFIRMED', 'COMPLETED'])
             if payment_type:
@@ -190,9 +185,14 @@ class DashboardStatsView(APIView):
                 month_key = appt.slot.start_time.strftime('%Y-%m')
                 monthly_income[month_key] = monthly_income.get(month_key, Decimal(0)) + appt.slot.price
                 monthly_sessions[month_key] = monthly_sessions.get(month_key, 0) + 1
+                month_tax = calculate_tax(appt.slot.price)
+                monthly_tax[month_key] = monthly_tax.get(month_key, Decimal(0)) + month_tax
+                annual_income += appt.slot.price
+                annual_tax += month_tax
 
             monthly_income = dict(sorted(monthly_income.items()))
             monthly_sessions = dict(sorted(monthly_sessions.items()))
+            monthly_tax = dict(sorted(monthly_tax.items()))
 
         # -------------------------
         # پاسخ JSON نهایی
@@ -207,4 +207,7 @@ class DashboardStatsView(APIView):
             'top_clients': top_clients,
             'monthly_income': monthly_income,
             'monthly_sessions': monthly_sessions,
+            'monthly_tax': monthly_tax,
+            'annual_income': annual_income,
+            'annual_tax': annual_tax,
         })
