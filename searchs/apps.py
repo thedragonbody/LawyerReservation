@@ -4,3 +4,5 @@ from django.apps import AppConfig
 class SearchsConfig(AppConfig):
     default_auto_field = "django.db.models.BigAutoField"
     name = "searchs"
+    def ready(self):
+        import searchs.signals
