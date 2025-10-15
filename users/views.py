@@ -34,31 +34,6 @@ class RegisterView(generics.CreateAPIView):
         uidb64 = urlsafe_base64_encode(force_bytes(user.pk))
         verify_link = f"http://localhost:3000/verify-email/{uidb64}/{token}/"
 
-
-
-# ----------------------------
-# Email Verification
-# ----------------------------
-class VerifyEmailView(generics.GenericAPIView):
-    permission_classes = [AllowAny]
-
-    def get(self, request, *args, **kwargs):
-        uidb64 = request.query_params.get("uidb64")
-        token = request.query_params.get("token")
-        try:
-            uid = force_str(urlsafe_base64_decode(uidb64))
-            user = User.objects.get(pk=uid)
-        except (TypeError, ValueError, OverflowError, User.DoesNotExist):
-            return Response({"detail": "Invalid UID."}, status=status.HTTP_400_BAD_REQUEST)
-
-        token_generator = PasswordResetTokenGenerator()
-        if not token_generator.check_token(user, token):
-            return Response({"detail": "Invalid or expired token."}, status=status.HTTP_400_BAD_REQUEST)
-
-        user.is_active = True
-        user.save()
-        return Response({"detail": "Email verified successfully."}, status=status.HTTP_200_OK)
-
 # ----------------------------
 # Login API (JWT)
 # ----------------------------

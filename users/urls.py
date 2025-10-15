@@ -3,12 +3,11 @@ from .views import (
     RegisterView, LoginView, RefreshTokenView, LogoutView,
     ClientProfileView, LawyerProfileView, ChangePasswordView,
     LawyerListView, PasswordResetRequestView, PasswordResetConfirmView,
-    VerifyEmailView
+
 )
 
 urlpatterns = [
     path("register/", RegisterView.as_view(), name="users-register"),
-    path("verify-email/", VerifyEmailView.as_view(), name="users-verify-email"),
     path("login/", LoginView.as_view(), name="users-login"),
     path("token/refresh/", RefreshTokenView.as_view(), name="token-refresh"),
     path("logout/", LogoutView.as_view(), name="users-logout"),
