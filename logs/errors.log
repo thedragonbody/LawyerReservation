@@ -10,3 +10,125 @@ Traceback (most recent call last):
     ~~^~~
 ZeroDivisionError: division by zero
 [2025-10-12 13:15:53,392] [ERROR] [django.server] "GET /test-error/ HTTP/1.1" 500 76849
+[2025-10-15 12:46:32,673] [ERROR] [common] {"type": "exception", "user": "allanlondon19452122@gmail.com", "method": "GET", "path": "/users/verify-email/", "query_params": {}, "body": {}, "exception": "'NoneType' object has no attribute 'encode'", "traceback": "Traceback (most recent call last):\n  File \"E:\\Python\\Lib\\site-packages\\django\\core\\handlers\\base.py\", line 197, in _get_response\n    response = wrapped_callback(request, *callback_args, **callback_kwargs)\n  File \"E:\\Python\\Lib\\site-packages\\django\\views\\decorators\\csrf.py\", line 65, in _view_wrapper\n    return view_func(request, *args, **kwargs)\n  File \"E:\\Python\\Lib\\site-packages\\django\\views\\generic\\base.py\", line 105, in view\n    return self.dispatch(request, *args, **kwargs)\n           ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\views.py\", line 515, in dispatch\n    response = self.handle_exception(exc)\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\views.py\", line 475, in handle_exception\n    self.raise_uncaught_exception(exc)\n    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\views.py\", line 486, in raise_uncaught_exception\n    raise exc\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\views.py\", line 512, in dispatch\n    response = handler(request, *args, **kwargs)\n  File \"E:\\2VAKIL\\AloVakil\\users\\views.py\", line 49, in get\n    uid = force_str(urlsafe_base64_decode(uidb64))\n                    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^\n  File \"E:\\Python\\Lib\\site-packages\\django\\utils\\http.py\", line 191, in urlsafe_base64_decode\n    s = s.encode()\n        ^^^^^^^^\nAttributeError: 'NoneType' object has no attribute 'encode'\n"}
+[2025-10-15 12:46:32,722] [ERROR] [django.request] Internal Server Error: /users/verify-email/
+Traceback (most recent call last):
+  File "E:\Python\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "E:\Python\Lib\site-packages\django\core\handlers\base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "E:\Python\Lib\site-packages\django\views\decorators\csrf.py", line 65, in _view_wrapper
+    return view_func(request, *args, **kwargs)
+  File "E:\Python\Lib\site-packages\django\views\generic\base.py", line 105, in view
+    return self.dispatch(request, *args, **kwargs)
+           ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\Python\Lib\site-packages\rest_framework\views.py", line 515, in dispatch
+    response = self.handle_exception(exc)
+  File "E:\Python\Lib\site-packages\rest_framework\views.py", line 475, in handle_exception
+    self.raise_uncaught_exception(exc)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^
+  File "E:\Python\Lib\site-packages\rest_framework\views.py", line 486, in raise_uncaught_exception
+    raise exc
+  File "E:\Python\Lib\site-packages\rest_framework\views.py", line 512, in dispatch
+    response = handler(request, *args, **kwargs)
+  File "E:\2VAKIL\AloVakil\users\views.py", line 49, in get
+    uid = force_str(urlsafe_base64_decode(uidb64))
+                    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+  File "E:\Python\Lib\site-packages\django\utils\http.py", line 191, in urlsafe_base64_decode
+    s = s.encode()
+        ^^^^^^^^
+AttributeError: 'NoneType' object has no attribute 'encode'
+[2025-10-15 12:46:32,725] [ERROR] [django.server] "GET /users/verify-email/ HTTP/1.1" 500 109920
+[2025-10-15 12:59:01,258] [ERROR] [common] {"type": "exception", "user": "allanlondon19452122@gmail.com", "method": "POST", "path": "/users/password-reset/", "query_params": {}, "body": "<unreadable body>", "exception": "[WinError 10061] No connection could be made because the target machine actively refused it", "traceback": "Traceback (most recent call last):\n  File \"E:\\Python\\Lib\\site-packages\\django\\core\\handlers\\base.py\", line 197, in _get_response\n    response = wrapped_callback(request, *callback_args, **callback_kwargs)\n  File \"E:\\Python\\Lib\\site-packages\\django\\views\\decorators\\csrf.py\", line 65, in _view_wrapper\n    return view_func(request, *args, **kwargs)\n  File \"E:\\Python\\Lib\\site-packages\\django\\views\\generic\\base.py\", line 105, in view\n    return self.dispatch(request, *args, **kwargs)\n           ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\views.py\", line 515, in dispatch\n    response = self.handle_exception(exc)\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\views.py\", line 475, in handle_exception\n    self.raise_uncaught_exception(exc)\n    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\views.py\", line 486, in raise_uncaught_exception\n    raise exc\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\views.py\", line 512, in dispatch\n    response = handler(request, *args, **kwargs)\n  File \"E:\\2VAKIL\\AloVakil\\users\\views.py\", line 159, in post\n    send_mail(\n    ~~~~~~~~~^\n        \"Password Reset Request\",\n        ^^^^^^^^^^^^^^^^^^^^^^^^^\n    ...<3 lines>...\n        fail_silently=False,\n        ^^^^^^^^^^^^^^^^^^^^\n    )\n    ^\n  File \"E:\\Python\\Lib\\site-packages\\django\\core\\mail\\__init__.py\", line 92, in send_mail\n    return mail.send()\n           ~~~~~~~~~^^\n  File \"E:\\Python\\Lib\\site-packages\\django\\core\\mail\\message.py\", line 307, in send\n    return self.get_connection(fail_silently).send_messages([self])\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^\n  File \"E:\\Python\\Lib\\site-packages\\django\\core\\mail\\backends\\smtp.py\", line 128, in send_messages\n    new_conn_created = self.open()\n  File \"E:\\Python\\Lib\\site-packages\\django\\core\\mail\\backends\\smtp.py\", line 86, in open\n    self.connection = self.connection_class(\n                      ~~~~~~~~~~~~~~~~~~~~~^\n        self.host, self.port, **connection_params\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    )\n    ^\n  File \"E:\\Python\\Lib\\smtplib.py\", line 255, in __init__\n    (code, msg) = self.connect(host, port)\n                  ~~~~~~~~~~~~^^^^^^^^^^^^\n  File \"E:\\Python\\Lib\\smtplib.py\", line 341, in connect\n    self.sock = self._get_socket(host, port, self.timeout)\n                ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"E:\\Python\\Lib\\smtplib.py\", line 312, in _get_socket\n    return socket.create_connection((host, port), timeout,\n           ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^\n                                    self.source_address)\n                                    ^^^^^^^^^^^^^^^^^^^^\n  File \"E:\\Python\\Lib\\socket.py\", line 864, in create_connection\n    raise exceptions[0]\n  File \"E:\\Python\\Lib\\socket.py\", line 849, in create_connection\n    sock.connect(sa)\n    ~~~~~~~~~~~~^^^^\nConnectionRefusedError: [WinError 10061] No connection could be made because the target machine actively refused it\n"}
+[2025-10-15 12:59:01,277] [ERROR] [django.request] Internal Server Error: /users/password-reset/
+Traceback (most recent call last):
+  File "E:\Python\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "E:\Python\Lib\site-packages\django\core\handlers\base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "E:\Python\Lib\site-packages\django\views\decorators\csrf.py", line 65, in _view_wrapper
+    return view_func(request, *args, **kwargs)
+  File "E:\Python\Lib\site-packages\django\views\generic\base.py", line 105, in view
+    return self.dispatch(request, *args, **kwargs)
+           ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\Python\Lib\site-packages\rest_framework\views.py", line 515, in dispatch
+    response = self.handle_exception(exc)
+  File "E:\Python\Lib\site-packages\rest_framework\views.py", line 475, in handle_exception
+    self.raise_uncaught_exception(exc)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^
+  File "E:\Python\Lib\site-packages\rest_framework\views.py", line 486, in raise_uncaught_exception
+    raise exc
+  File "E:\Python\Lib\site-packages\rest_framework\views.py", line 512, in dispatch
+    response = handler(request, *args, **kwargs)
+  File "E:\2VAKIL\AloVakil\users\views.py", line 159, in post
+    send_mail(
+    ~~~~~~~~~^
+        "Password Reset Request",
+        ^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+        fail_silently=False,
+        ^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "E:\Python\Lib\site-packages\django\core\mail\__init__.py", line 92, in send_mail
+    return mail.send()
+           ~~~~~~~~~^^
+  File "E:\Python\Lib\site-packages\django\core\mail\message.py", line 307, in send
+    return self.get_connection(fail_silently).send_messages([self])
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+  File "E:\Python\Lib\site-packages\django\core\mail\backends\smtp.py", line 128, in send_messages
+    new_conn_created = self.open()
+  File "E:\Python\Lib\site-packages\django\core\mail\backends\smtp.py", line 86, in open
+    self.connection = self.connection_class(
+                      ~~~~~~~~~~~~~~~~~~~~~^
+        self.host, self.port, **connection_params
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "E:\Python\Lib\smtplib.py", line 255, in __init__
+    (code, msg) = self.connect(host, port)
+                  ~~~~~~~~~~~~^^^^^^^^^^^^
+  File "E:\Python\Lib\smtplib.py", line 341, in connect
+    self.sock = self._get_socket(host, port, self.timeout)
+                ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\Python\Lib\smtplib.py", line 312, in _get_socket
+    return socket.create_connection((host, port), timeout,
+           ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+                                    self.source_address)
+                                    ^^^^^^^^^^^^^^^^^^^^
+  File "E:\Python\Lib\socket.py", line 864, in create_connection
+    raise exceptions[0]
+  File "E:\Python\Lib\socket.py", line 849, in create_connection
+    sock.connect(sa)
+    ~~~~~~~~~~~~^^^^
+ConnectionRefusedError: [WinError 10061] No connection could be made because the target machine actively refused it
+[2025-10-15 12:59:01,280] [ERROR] [django.server] "POST /users/password-reset/ HTTP/1.1" 500 150884
+[2025-10-15 13:08:01,113] [ERROR] [common] {"type": "exception", "user": "allanlondon19452122@gmail.com", "method": "GET", "path": "/users/verify-email/", "query_params": {}, "body": {}, "exception": "'NoneType' object has no attribute 'encode'", "traceback": "Traceback (most recent call last):\n  File \"E:\\Python\\Lib\\site-packages\\django\\core\\handlers\\base.py\", line 197, in _get_response\n    response = wrapped_callback(request, *callback_args, **callback_kwargs)\n  File \"E:\\Python\\Lib\\site-packages\\django\\views\\decorators\\csrf.py\", line 65, in _view_wrapper\n    return view_func(request, *args, **kwargs)\n  File \"E:\\Python\\Lib\\site-packages\\django\\views\\generic\\base.py\", line 105, in view\n    return self.dispatch(request, *args, **kwargs)\n           ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\views.py\", line 515, in dispatch\n    response = self.handle_exception(exc)\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\views.py\", line 475, in handle_exception\n    self.raise_uncaught_exception(exc)\n    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\views.py\", line 486, in raise_uncaught_exception\n    raise exc\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\views.py\", line 512, in dispatch\n    response = handler(request, *args, **kwargs)\n  File \"E:\\2VAKIL\\AloVakil\\users\\views.py\", line 49, in get\n    uid = force_str(urlsafe_base64_decode(uidb64))\n                    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^\n  File \"E:\\Python\\Lib\\site-packages\\django\\utils\\http.py\", line 191, in urlsafe_base64_decode\n    s = s.encode()\n        ^^^^^^^^\nAttributeError: 'NoneType' object has no attribute 'encode'\n"}
+[2025-10-15 13:08:01,128] [ERROR] [django.request] Internal Server Error: /users/verify-email/
+Traceback (most recent call last):
+  File "E:\Python\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "E:\Python\Lib\site-packages\django\core\handlers\base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "E:\Python\Lib\site-packages\django\views\decorators\csrf.py", line 65, in _view_wrapper
+    return view_func(request, *args, **kwargs)
+  File "E:\Python\Lib\site-packages\django\views\generic\base.py", line 105, in view
+    return self.dispatch(request, *args, **kwargs)
+           ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\Python\Lib\site-packages\rest_framework\views.py", line 515, in dispatch
+    response = self.handle_exception(exc)
+  File "E:\Python\Lib\site-packages\rest_framework\views.py", line 475, in handle_exception
+    self.raise_uncaught_exception(exc)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^
+  File "E:\Python\Lib\site-packages\rest_framework\views.py", line 486, in raise_uncaught_exception
+    raise exc
+  File "E:\Python\Lib\site-packages\rest_framework\views.py", line 512, in dispatch
+    response = handler(request, *args, **kwargs)
+  File "E:\2VAKIL\AloVakil\users\views.py", line 49, in get
+    uid = force_str(urlsafe_base64_decode(uidb64))
+                    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+  File "E:\Python\Lib\site-packages\django\utils\http.py", line 191, in urlsafe_base64_decode
+    s = s.encode()
+        ^^^^^^^^
+AttributeError: 'NoneType' object has no attribute 'encode'
+[2025-10-15 13:08:01,130] [ERROR] [django.server] "GET /users/verify-email/ HTTP/1.1" 500 109920
