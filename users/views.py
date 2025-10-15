@@ -4,52 +4,46 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from django.contrib.auth.tokens import PasswordResetTokenGenerator
-from django.utils.encoding import force_bytes, force_str
-from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
-from django.core.mail import send_mail
-
 from .models import User, ClientProfile, LawyerProfile
 from .serializers import (
     UserSerializer, ClientProfileSerializer, LawyerProfileSerializer,
     ChangePasswordSerializer, LogoutSerializer, LawyerListSerializer,
-    CustomTokenObtainPairSerializer, PasswordResetRequestSerializer,
-    PasswordResetConfirmSerializer
+    CustomTokenObtainPairSerializer
 )
 
-# ----------------------------
-# Register API
-# ----------------------------
+# ================================
+# Sign Up (ثبت نام با OTP)
+# ================================
 class RegisterView(generics.CreateAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = [AllowAny]
 
     def perform_create(self, serializer):
-        # User با is_active=False ساخته می‌شود
-        user = serializer.save(is_active=False)
-        # ارسال ایمیل تایید
-        token_generator = PasswordResetTokenGenerator()
-        token = token_generator.make_token(user)
-        uidb64 = urlsafe_base64_encode(force_bytes(user.pk))
-        verify_link = f"http://localhost:3000/verify-email/{uidb64}/{token}/"
+        user = serializer.save()
+        # TODO: ارسال OTP به شماره کاربر
+        # مثال: send_otp(user.phone_number)
+        return user
 
-# ----------------------------
-# Login API (JWT)
-# ----------------------------
+
+# ================================
+# Login (JWT)
+# ================================
 class LoginView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
     permission_classes = [AllowAny]
 
-# ----------------------------
-# Refresh JWT Token
-# ----------------------------
+
+# ================================
+# Refresh Token (در صورت نیاز)
+# ================================
 class RefreshTokenView(TokenRefreshView):
     permission_classes = [AllowAny]
 
-# ----------------------------
-# Logout API (JWT Blacklist)
-# ----------------------------
+
+# ================================
+# Logout (JWT blacklist)
+# ================================
 class LogoutView(generics.GenericAPIView):
     serializer_class = LogoutSerializer
     permission_classes = [IsAuthenticated]
@@ -60,9 +54,10 @@ class LogoutView(generics.GenericAPIView):
         serializer.save()
         return Response({"detail": "Logout successful."}, status=status.HTTP_204_NO_CONTENT)
 
-# ----------------------------
-# Client Profile API
-# ----------------------------
+
+# ================================
+# Client Profile
+# ================================
 class ClientProfileView(generics.RetrieveUpdateAPIView):
     serializer_class = ClientProfileSerializer
     permission_classes = [IsAuthenticated]
@@ -71,9 +66,10 @@ class ClientProfileView(generics.RetrieveUpdateAPIView):
         profile, _ = ClientProfile.objects.get_or_create(user=self.request.user)
         return profile
 
-# ----------------------------
-# Lawyer Profile API
-# ----------------------------
+
+# ================================
+# Lawyer Profile
+# ================================
 class LawyerProfileView(generics.RetrieveUpdateAPIView):
     serializer_class = LawyerProfileSerializer
     permission_classes = [IsAuthenticated]
@@ -82,9 +78,10 @@ class LawyerProfileView(generics.RetrieveUpdateAPIView):
         profile, _ = LawyerProfile.objects.get_or_create(user=self.request.user)
         return profile
 
-# ----------------------------
-# Change Password API
-# ----------------------------
+
+# ================================
+# Change Password
+# ================================
 class ChangePasswordView(generics.UpdateAPIView):
     serializer_class = ChangePasswordSerializer
     model = User
@@ -105,51 +102,19 @@ class ChangePasswordView(generics.UpdateAPIView):
         user.save()
         return Response({"detail": "Password updated successfully."}, status=status.HTTP_200_OK)
 
-# ----------------------------
-# List of Lawyers
-# ----------------------------
+
+# ================================
+# List of Lawyers (با pagination)
+# ================================
+from rest_framework.pagination import PageNumberPagination
+
+class LawyerListPagination(PageNumberPagination):
+    page_size = 10
+    page_size_query_param = 'page_size'
+    max_page_size = 50
+
 class LawyerListView(generics.ListAPIView):
     queryset = LawyerProfile.objects.filter(status=LawyerProfile.Status.APPROVED)
     serializer_class = LawyerListSerializer
     permission_classes = [AllowAny]
-
-# ----------------------------
-# Password Reset Request
-# ----------------------------
-class PasswordResetRequestView(generics.GenericAPIView):
-    serializer_class = PasswordResetRequestSerializer
-    permission_classes = [AllowAny]
-
-    def post(self, request):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-
-        user = User.objects.get(email=serializer.validated_data['email'])
-        token_generator = PasswordResetTokenGenerator()
-        token = token_generator.make_token(user)
-        uidb64 = urlsafe_base64_encode(force_bytes(user.pk))
-
-        reset_link = f"http://localhost:3000/reset-password/{uidb64}/{token}/"
-
-        send_mail(
-            "Password Reset Request",
-            f"Click the link to reset your password: {reset_link}",
-            "no-reply@alovakil.com",
-            [user.email],
-            fail_silently=False,
-        )
-
-        return Response({"detail": "Password reset link sent to email."}, status=status.HTTP_200_OK)
-
-# ----------------------------
-# Password Reset Confirm
-# ----------------------------
-class PasswordResetConfirmView(generics.GenericAPIView):
-    serializer_class = PasswordResetConfirmSerializer
-    permission_classes = [AllowAny]
-
-    def post(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response({"detail": "Password reset successful."}, status=status.HTTP_200_OK)
+    pagination_class = LawyerListPagination

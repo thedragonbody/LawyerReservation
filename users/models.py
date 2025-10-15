@@ -1,7 +1,8 @@
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, BaseUserManager
+from django.utils import timezone
+import random
 from django.utils.translation import gettext_lazy as _
-
 
 # ================= Custom UserManager =================
 class UserManager(BaseUserManager):
@@ -19,6 +20,7 @@ class UserManager(BaseUserManager):
         extra_fields.setdefault('is_staff', True)
         extra_fields.setdefault('is_superuser', True)
         extra_fields.setdefault('is_active', True)
+        extra_fields.setdefault('is_verified', True)  # سوپر یوزر همیشه تایید شده
 
         if extra_fields.get('is_staff') is not True:
             raise ValueError("Superuser must have is_staff=True.")
@@ -36,15 +38,36 @@ class User(AbstractBaseUser, PermissionsMixin):
     device_token = models.CharField(max_length=255, blank=True, null=True)
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
+    is_verified = models.BooleanField(default=False)  # تایید شماره موبایل
+    otp_code = models.CharField(max_length=6, blank=True, null=True)
+    otp_created_at = models.DateTimeField(blank=True, null=True)
     date_joined = models.DateTimeField(auto_now_add=True)
 
     USERNAME_FIELD = "phone_number"
-    REQUIRED_FIELDS = []  # no email, no username
+    REQUIRED_FIELDS = []
 
     objects = UserManager()
 
     def __str__(self):
         return f"{self.first_name or ''} {self.last_name or ''} ({self.phone_number})"
+
+    def generate_otp(self):
+        self.otp_code = f"{random.randint(100000, 999999)}"
+        self.otp_created_at = timezone.now()
+        self.save()
+        return self.otp_code
+
+    def verify_otp(self, code):
+        if self.otp_code == code and self.otp_created_at:
+            # اعتبار OTP: 5 دقیقه
+            diff = timezone.now() - self.otp_created_at
+            if diff.total_seconds() <= 300:
+                self.is_verified = True
+                self.otp_code = None
+                self.otp_created_at = None
+                self.save()
+                return True
+        return False
 
 
 # ================= ClientProfile =================

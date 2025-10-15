@@ -1,20 +1,29 @@
 from django.urls import path
 from .views import (
-    RegisterView, LoginView, RefreshTokenView, LogoutView,
-    ClientProfileView, LawyerProfileView, ChangePasswordView,
-    LawyerListView, PasswordResetRequestView, PasswordResetConfirmView,
-
+    RegisterView,
+    LoginView,
+    LogoutView,
+    RefreshTokenView,
+    ClientProfileView,
+    LawyerProfileView,
+    ChangePasswordView,
+    LawyerListView,
 )
 
 urlpatterns = [
-    path("register/", RegisterView.as_view(), name="users-register"),
-    path("login/", LoginView.as_view(), name="users-login"),
-    path("token/refresh/", RefreshTokenView.as_view(), name="token-refresh"),
-    path("logout/", LogoutView.as_view(), name="users-logout"),
-    path("profile/client/", ClientProfileView.as_view(), name="users-client-profile"),
-    path("profile/lawyer/", LawyerProfileView.as_view(), name="users-lawyer-profile"),
-    path("change-password/", ChangePasswordView.as_view(), name="change-password"),
-    path("lawyers/", LawyerListView.as_view(), name="users-lawyers"),
-    path("password-reset/", PasswordResetRequestView.as_view(), name="users-password-reset"),
-    path("password-reset-confirm/", PasswordResetConfirmView.as_view(), name="users-password-reset-confirm"),
+    # ---------------- Auth ----------------
+    path("signup/", RegisterView.as_view(), name="signup"),
+    path("login/", LoginView.as_view(), name="login"),
+    path("logout/", LogoutView.as_view(), name="logout"),
+    path("token/refresh/", RefreshTokenView.as_view(), name="token_refresh"),
+
+    # ---------------- Profiles ----------------
+    path("client-profile/", ClientProfileView.as_view(), name="client_profile"),
+    path("lawyer-profile/", LawyerProfileView.as_view(), name="lawyer_profile"),
+
+    # ---------------- Change Password ----------------
+    path("change-password/", ChangePasswordView.as_view(), name="change_password"),
+
+    # ---------------- List of Lawyers ----------------
+    path("lawyers/", LawyerListView.as_view(), name="lawyer_list"),
 ]
