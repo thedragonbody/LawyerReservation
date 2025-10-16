@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from django.db import transaction
 from rest_framework.exceptions import ValidationError
 from notifications.models import Notification
+from rest_framework.views import APIView
 
 from .models import Slot, Appointment
 from .serializers import AppointmentSerializer
@@ -69,7 +70,7 @@ class AppointmentCreateView(generics.GenericAPIView):
         }, status=status.HTTP_200_OK)
 
 
-class AppointmentPaymentCallbackView(generics.GenericAPIView):
+class AppointmentPaymentCallbackView(APIView):
     """
     Callback برای تایید پرداخت و ایجاد رزرو نهایی.
     """
@@ -77,7 +78,10 @@ class AppointmentPaymentCallbackView(generics.GenericAPIView):
 
     def post(self, request, *args, **kwargs):
         transaction_id = request.data.get("transaction_id")
-        payment = Payment.objects.get(transaction_id=transaction_id)
+        try:
+            payment = Payment.objects.get(transaction_id=transaction_id)
+        except Payment.DoesNotExist:
+            return Response({"detail": "Payment not found."}, status=status.HTTP_404_NOT_FOUND)
 
         if payment.user != request.user:
             return Response({"detail": "Unauthorized."}, status=status.HTTP_403_FORBIDDEN)
@@ -122,7 +126,9 @@ class AppointmentPaymentCallbackView(generics.GenericAPIView):
             title="Appointment Confirmed",
             message=f"Your appointment on {slot.start_time} has been confirmed."
         )
-        send_sms(appointment.client.user.phone_number,
-                 f"پرداخت موفق! وقت شما {slot.start_time} با {slot.lawyer.user.get_full_name()} تایید شد.")
+        send_sms(
+            appointment.client.user.phone_number,
+            f"پرداخت موفق! وقت شما {slot.start_time} با {slot.lawyer.user.get_full_name()} تایید شد."
+        )
 
         return Response({"detail": "Appointment confirmed successfully."}, status=status.HTTP_200_OK)
