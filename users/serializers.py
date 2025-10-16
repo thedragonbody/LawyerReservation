@@ -155,4 +155,7 @@ class ResetPasswordSerializer(serializers.Serializer):
         user = self.validated_data["user"]
         user.set_password(self.validated_data["new_password"])
         user.save()
+        reset_code = PasswordResetCode.objects.filter(phone_number=self.validated_data["phone_number"], code=self.validated_data["code"]).latest("created_at")
+        reset_code.is_used = True
+        reset_code.save()
         return user

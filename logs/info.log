@@ -215,3 +215,106 @@
 [2025-10-16 12:17:45,174] [INFO] [common] {"type": "request_end", "user": "Anonymous", "method": "GET", "path": "/users/lawyers/", "status_code": 200}
 [2025-10-16 12:17:50,905] [INFO] [common] {"type": "request_start", "user": "Anonymous", "method": "GET", "path": "/users/", "query_params": {}, "body": {}}
 [2025-10-16 12:17:50,909] [INFO] [common] {"type": "request_end", "user": "Anonymous", "method": "GET", "path": "/users/", "status_code": 404}
+[2025-10-16 13:14:10,748] [INFO] [common] {"type": "request_start", "user": "Anonymous", "method": "GET", "path": "/users/", "query_params": {}, "body": {}}
+[2025-10-16 13:14:10,753] [INFO] [common] {"type": "request_end", "user": "Anonymous", "method": "GET", "path": "/users/", "status_code": 404}
+[2025-10-16 13:14:27,771] [INFO] [common] {"type": "request_start", "user": "Anonymous", "method": "GET", "path": "/users/forgot-password/", "query_params": {}, "body": {}}
+[2025-10-16 13:14:27,826] [INFO] [common] {"type": "request_end", "user": "Anonymous", "method": "GET", "path": "/users/forgot-password/", "status_code": 405}
+[2025-10-16 13:15:11,331] [INFO] [common] {"type": "request_start", "user": "Anonymous", "method": "POST", "path": "/users/forgot-password/", "query_params": {}, "body": "<unreadable body>"}
+[2025-10-16 13:15:11,386] [ERROR] [common] {"type": "exception", "user": "Anonymous", "method": "POST", "path": "/users/forgot-password/", "query_params": {}, "body": "<unreadable body>", "exception": "name 'PasswordResetCode' is not defined", "traceback": "Traceback (most recent call last):\n  File \"E:\\Python\\Lib\\site-packages\\django\\core\\handlers\\base.py\", line 197, in _get_response\n    response = wrapped_callback(request, *callback_args, **callback_kwargs)\n  File \"E:\\Python\\Lib\\site-packages\\django\\views\\decorators\\csrf.py\", line 65, in _view_wrapper\n    return view_func(request, *args, **kwargs)\n  File \"E:\\Python\\Lib\\site-packages\\django\\views\\generic\\base.py\", line 105, in view\n    return self.dispatch(request, *args, **kwargs)\n           ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\views.py\", line 515, in dispatch\n    response = self.handle_exception(exc)\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\views.py\", line 475, in handle_exception\n    self.raise_uncaught_exception(exc)\n    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\views.py\", line 486, in raise_uncaught_exception\n    raise exc\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\views.py\", line 512, in dispatch\n    response = handler(request, *args, **kwargs)\n  File \"E:\\2VAKIL\\AloVakil\\users\\views.py\", line 149, in post\n    code = PasswordResetCode.generate_code()\n           ^^^^^^^^^^^^^^^^^\nNameError: name 'PasswordResetCode' is not defined\n"}
+[2025-10-16 13:15:11,427] [INFO] [common] {"type": "request_end", "user": "Anonymous", "method": "POST", "path": "/users/forgot-password/", "status_code": 500}
+[2025-10-16 13:16:39,577] [INFO] [common] {"type": "request_start", "user": "Anonymous", "method": "POST", "path": "/users/forgot-password/", "query_params": {}, "body": "<unreadable body>"}
+[2025-10-16 13:16:39,629] [INFO] [common] {"type": "request_end", "user": "Anonymous", "method": "POST", "path": "/users/forgot-password/", "status_code": 200}
+[2025-10-16 13:16:42,948] [INFO] [common] {"type": "request_start", "user": "Anonymous", "method": "POST", "path": "/users/forgot-password/", "query_params": {}, "body": "<unreadable body>"}
+[2025-10-16 13:16:42,977] [INFO] [common] {"type": "request_end", "user": "Anonymous", "method": "POST", "path": "/users/forgot-password/", "status_code": 200}
+[2025-10-16 13:22:09,869] [INFO] [common] {"type": "request_start", "user": "Anonymous", "method": "GET", "path": "/users/forgot-password/", "query_params": {}, "body": {}}
+[2025-10-16 13:22:09,872] [INFO] [common] {"type": "request_end", "user": "Anonymous", "method": "GET", "path": "/users/forgot-password/", "status_code": 405}
+[2025-10-16 13:22:17,575] [INFO] [common] {"type": "request_start", "user": "Anonymous", "method": "GET", "path": "/users/change-password/", "query_params": {}, "body": {}}
+[2025-10-16 13:22:17,576] [INFO] [common] {"type": "request_end", "user": "Anonymous", "method": "GET", "path": "/users/change-password/", "status_code": 401}
+[2025-10-16 13:30:23,725] [INFO] [common] {"type": "request_start", "user": "Anonymous", "method": "GET", "path": "/users/change-password/", "query_params": {}, "body": {}}
+[2025-10-16 13:30:23,727] [INFO] [common] {"type": "request_end", "user": "Anonymous", "method": "GET", "path": "/users/change-password/", "status_code": 401}
+[2025-10-16 13:30:28,916] [INFO] [common] {"type": "request_start", "user": "Anonymous", "method": "GET", "path": "/users/change-password/", "query_params": {}, "body": {}}
+[2025-10-16 13:30:28,919] [INFO] [common] {"type": "request_end", "user": "Anonymous", "method": "GET", "path": "/users/change-password/", "status_code": 401}
+[2025-10-16 13:30:38,301] [INFO] [common] {"type": "request_start", "user": "Anonymous", "method": "GET", "path": "/users/change-password/", "query_params": {}, "body": {}}
+[2025-10-16 13:30:38,303] [INFO] [common] {"type": "request_end", "user": "Anonymous", "method": "GET", "path": "/users/change-password/", "status_code": 401}
+[2025-10-16 13:30:39,110] [INFO] [common] {"type": "request_start", "user": "Anonymous", "method": "GET", "path": "/users/change-password/", "query_params": {}, "body": {}}
+[2025-10-16 13:30:39,112] [INFO] [common] {"type": "request_end", "user": "Anonymous", "method": "GET", "path": "/users/change-password/", "status_code": 401}
+[2025-10-16 13:30:41,222] [INFO] [common] {"type": "request_start", "user": "Anonymous", "method": "GET", "path": "/users/change-password/", "query_params": {}, "body": {}}
+[2025-10-16 13:30:41,224] [INFO] [common] {"type": "request_end", "user": "Anonymous", "method": "GET", "path": "/users/change-password/", "status_code": 401}
+[2025-10-16 13:30:46,580] [INFO] [common] {"type": "request_start", "user": "Anonymous", "method": "GET", "path": "/users/change-password/", "query_params": {}, "body": {}}
+[2025-10-16 13:30:46,582] [INFO] [common] {"type": "request_end", "user": "Anonymous", "method": "GET", "path": "/users/change-password/", "status_code": 401}
+[2025-10-16 13:43:45,303] [INFO] [common] {"type": "request_start", "user": "Anonymous", "method": "GET", "path": "/users/change-password/", "query_params": {}, "body": {}}
+[2025-10-16 13:43:45,323] [INFO] [common] {"type": "request_end", "user": "Anonymous", "method": "GET", "path": "/users/change-password/", "status_code": 401}
+[2025-10-16 13:43:45,925] [INFO] [common] {"type": "request_start", "user": "Anonymous", "method": "GET", "path": "/users/change-password/", "query_params": {}, "body": {}}
+[2025-10-16 13:43:45,926] [INFO] [common] {"type": "request_end", "user": "Anonymous", "method": "GET", "path": "/users/change-password/", "status_code": 401}
+[2025-10-16 13:43:46,251] [INFO] [common] {"type": "request_start", "user": "Anonymous", "method": "GET", "path": "/users/change-password/", "query_params": {}, "body": {}}
+[2025-10-16 13:43:46,253] [INFO] [common] {"type": "request_end", "user": "Anonymous", "method": "GET", "path": "/users/change-password/", "status_code": 401}
+[2025-10-16 13:43:46,508] [INFO] [common] {"type": "request_start", "user": "Anonymous", "method": "GET", "path": "/users/change-password/", "query_params": {}, "body": {}}
+[2025-10-16 13:43:46,510] [INFO] [common] {"type": "request_end", "user": "Anonymous", "method": "GET", "path": "/users/change-password/", "status_code": 401}
+[2025-10-16 13:43:47,012] [INFO] [common] {"type": "request_start", "user": "Anonymous", "method": "GET", "path": "/users/change-password/", "query_params": {}, "body": {}}
+[2025-10-16 13:43:47,013] [INFO] [common] {"type": "request_end", "user": "Anonymous", "method": "GET", "path": "/users/change-password/", "status_code": 401}
+[2025-10-16 13:43:47,540] [INFO] [common] {"type": "request_start", "user": "Anonymous", "method": "GET", "path": "/users/change-password/", "query_params": {}, "body": {}}
+[2025-10-16 13:43:47,542] [INFO] [common] {"type": "request_end", "user": "Anonymous", "method": "GET", "path": "/users/change-password/", "status_code": 401}
+[2025-10-16 13:43:57,046] [INFO] [common] {"type": "request_start", "user": "Anonymous", "method": "GET", "path": "/users/login/", "query_params": {}, "body": {}}
+[2025-10-16 13:43:57,056] [INFO] [common] {"type": "request_end", "user": "Anonymous", "method": "GET", "path": "/users/login/", "status_code": 405}
+[2025-10-16 13:44:08,278] [INFO] [common] {"type": "request_start", "user": "Anonymous", "method": "POST", "path": "/users/login/", "query_params": {}, "body": "<unreadable body>"}
+[2025-10-16 13:44:08,695] [INFO] [common] {"type": "request_end", "user": "Anonymous", "method": "POST", "path": "/users/login/", "status_code": 401}
+[2025-10-16 13:44:22,072] [INFO] [common] {"type": "request_start", "user": "Anonymous", "method": "POST", "path": "/users/login/", "query_params": {}, "body": "<unreadable body>"}
+[2025-10-16 13:44:22,502] [INFO] [common] {"type": "request_end", "user": "Anonymous", "method": "POST", "path": "/users/login/", "status_code": 200}
+[2025-10-16 13:44:26,428] [INFO] [common] {"type": "request_start", "user": "Anonymous", "method": "POST", "path": "/users/login/", "query_params": {}, "body": "<unreadable body>"}
+[2025-10-16 13:44:26,849] [INFO] [common] {"type": "request_end", "user": "Anonymous", "method": "POST", "path": "/users/login/", "status_code": 200}
+[2025-10-16 13:44:39,060] [INFO] [common] {"type": "request_start", "user": "Anonymous", "method": "POST", "path": "/users/login/", "query_params": {}, "body": "<unreadable body>"}
+[2025-10-16 13:44:39,475] [INFO] [common] {"type": "request_end", "user": "Anonymous", "method": "POST", "path": "/users/login/", "status_code": 200}
+[2025-10-16 13:44:42,502] [INFO] [common] {"type": "request_start", "user": "Anonymous", "method": "POST", "path": "/users/login/", "query_params": {}, "body": "<unreadable body>"}
+[2025-10-16 13:44:42,911] [INFO] [common] {"type": "request_end", "user": "Anonymous", "method": "POST", "path": "/users/login/", "status_code": 401}
+[2025-10-16 13:44:44,525] [INFO] [common] {"type": "request_start", "user": "Anonymous", "method": "GET", "path": "/users/login/", "query_params": {}, "body": {}}
+[2025-10-16 13:44:44,528] [INFO] [common] {"type": "request_end", "user": "Anonymous", "method": "GET", "path": "/users/login/", "status_code": 405}
+[2025-10-16 13:44:44,892] [INFO] [common] {"type": "request_start", "user": "Anonymous", "method": "GET", "path": "/users/", "query_params": {}, "body": {}}
+[2025-10-16 13:44:44,895] [INFO] [common] {"type": "request_end", "user": "Anonymous", "method": "GET", "path": "/users/", "status_code": 404}
+[2025-10-16 13:45:13,998] [INFO] [common] {"type": "request_start", "user": "Anonymous", "method": "GET", "path": "/users/change-password/", "query_params": {}, "body": {}}
+[2025-10-16 13:45:14,000] [INFO] [common] {"type": "request_end", "user": "Anonymous", "method": "GET", "path": "/users/change-password/", "status_code": 401}
+[2025-10-16 13:52:50,574] [INFO] [common] {"type": "request_start", "user": "Anonymous", "method": "GET", "path": "/users/reset-password/", "query_params": {}, "body": {}}
+[2025-10-16 13:52:50,577] [INFO] [common] {"type": "request_end", "user": "Anonymous", "method": "GET", "path": "/users/reset-password/", "status_code": 401}
+[2025-10-16 13:52:52,531] [INFO] [common] {"type": "request_start", "user": "Anonymous", "method": "GET", "path": "/users/reset-password/", "query_params": {}, "body": {}}
+[2025-10-16 13:52:52,533] [INFO] [common] {"type": "request_end", "user": "Anonymous", "method": "GET", "path": "/users/reset-password/", "status_code": 401}
+[2025-10-16 13:53:02,269] [INFO] [common] {"type": "request_start", "user": "Anonymous", "method": "GET", "path": "/users/client-profile/", "query_params": {}, "body": {}}
+[2025-10-16 13:53:02,271] [INFO] [common] {"type": "request_end", "user": "Anonymous", "method": "GET", "path": "/users/client-profile/", "status_code": 401}
+[2025-10-16 13:53:17,981] [INFO] [common] {"type": "request_start", "user": "Anonymous", "method": "GET", "path": "/users/admin/", "query_params": {}, "body": {}}
+[2025-10-16 13:53:17,985] [INFO] [common] {"type": "request_end", "user": "Anonymous", "method": "GET", "path": "/users/admin/", "status_code": 404}
+[2025-10-16 13:53:23,053] [INFO] [common] {"type": "request_start", "user": "Anonymous", "method": "GET", "path": "/admin/", "query_params": {}, "body": {}}
+[2025-10-16 13:53:23,060] [INFO] [common] {"type": "request_end", "user": "Anonymous", "method": "GET", "path": "/admin/", "status_code": 302}
+[2025-10-16 13:53:23,063] [INFO] [common] {"type": "request_start", "user": "Anonymous", "method": "GET", "path": "/admin/login/", "query_params": {"next": "/admin/"}, "body": {}}
+[2025-10-16 13:53:23,113] [INFO] [common] {"type": "request_end", "user": "Anonymous", "method": "GET", "path": "/admin/login/", "status_code": 200}
+[2025-10-16 13:53:27,292] [INFO] [common] {"type": "request_start", "user": "Anonymous", "method": "POST", "path": "/admin/login/", "query_params": {"next": "/admin/"}, "body": "<unreadable body>"}
+[2025-10-16 13:53:27,704] [INFO] [common] {"type": "request_end", "user": "Anonymous", "method": "POST", "path": "/admin/login/", "status_code": 200}
+[2025-10-16 13:53:36,685] [INFO] [common] {"type": "request_start", "user": "Anonymous", "method": "POST", "path": "/admin/login/", "query_params": {"next": "/admin/"}, "body": "<unreadable body>"}
+[2025-10-16 13:53:37,101] [INFO] [common] {"type": "request_end", "user": "Anonymous", "method": "POST", "path": "/admin/login/", "status_code": 302}
+[2025-10-16 13:53:37,129] [INFO] [common] {"type": "request_start", "user": "Anonymous", "method": "GET", "path": "/admin/", "query_params": {}, "body": {}}
+[2025-10-16 13:53:37,157] [INFO] [common] {"type": "request_end", "user": "Anonymous", "method": "GET", "path": "/admin/", "status_code": 200}
+[2025-10-16 13:54:13,275] [INFO] [common] {"type": "request_start", "user": "Anonymous", "method": "GET", "path": "/admin/", "query_params": {}, "body": {}}
+[2025-10-16 13:54:13,285] [INFO] [common] {"type": "request_end", "user": "Anonymous", "method": "GET", "path": "/admin/", "status_code": 200}
+[2025-10-16 13:54:14,742] [INFO] [common] {"type": "request_start", "user": "Anonymous", "method": "GET", "path": "/admin/login/", "query_params": {"next": "/admin/"}, "body": {}}
+[2025-10-16 13:54:14,742] [INFO] [common] {"type": "request_end", "user": "Anonymous", "method": "GET", "path": "/admin/login/", "status_code": 302}
+[2025-10-16 13:54:14,777] [INFO] [common] {"type": "request_start", "user": "Anonymous", "method": "GET", "path": "/admin/", "query_params": {}, "body": {}}
+[2025-10-16 13:54:14,785] [INFO] [common] {"type": "request_end", "user": "Anonymous", "method": "GET", "path": "/admin/", "status_code": 200}
+[2025-10-16 13:54:15,700] [INFO] [common] {"type": "request_start", "user": "Anonymous", "method": "GET", "path": "/users/admin/", "query_params": {}, "body": {}}
+[2025-10-16 13:54:15,703] [INFO] [common] {"type": "request_end", "user": "Anonymous", "method": "GET", "path": "/users/admin/", "status_code": 404}
+[2025-10-16 13:54:17,118] [INFO] [common] {"type": "request_start", "user": "Anonymous", "method": "GET", "path": "/users/admin/", "query_params": {}, "body": {}}
+[2025-10-16 13:54:17,121] [INFO] [common] {"type": "request_end", "user": "Anonymous", "method": "GET", "path": "/users/admin/", "status_code": 404}
+[2025-10-16 13:54:22,102] [INFO] [common] {"type": "request_start", "user": "Anonymous", "method": "GET", "path": "/users/", "query_params": {}, "body": {}}
+[2025-10-16 13:54:22,105] [INFO] [common] {"type": "request_end", "user": "Anonymous", "method": "GET", "path": "/users/", "status_code": 404}
+[2025-10-16 13:54:31,736] [INFO] [common] {"type": "request_start", "user": "Anonymous", "method": "GET", "path": "/users/login/", "query_params": {}, "body": {}}
+[2025-10-16 13:54:31,738] [INFO] [common] {"type": "request_end", "user": "Anonymous", "method": "GET", "path": "/users/login/", "status_code": 405}
+[2025-10-16 13:54:35,340] [INFO] [common] {"type": "request_start", "user": "Anonymous", "method": "POST", "path": "/users/login/", "query_params": {}, "body": "<unreadable body>"}
+[2025-10-16 13:54:35,740] [INFO] [common] {"type": "request_end", "user": "Anonymous", "method": "POST", "path": "/users/login/", "status_code": 200}
+[2025-10-16 13:54:42,557] [INFO] [common] {"type": "request_start", "user": "Anonymous", "method": "POST", "path": "/users/login/", "query_params": {}, "body": "<unreadable body>"}
+[2025-10-16 13:54:42,961] [INFO] [common] {"type": "request_end", "user": "Anonymous", "method": "POST", "path": "/users/login/", "status_code": 200}
+[2025-10-16 13:54:47,109] [INFO] [common] {"type": "request_start", "user": "Anonymous", "method": "POST", "path": "/users/login/", "query_params": {}, "body": "<unreadable body>"}
+[2025-10-16 13:54:47,498] [INFO] [common] {"type": "request_end", "user": "Anonymous", "method": "POST", "path": "/users/login/", "status_code": 200}
+[2025-10-16 13:54:48,699] [INFO] [common] {"type": "request_start", "user": "Anonymous", "method": "OPTIONS", "path": "/users/login/", "query_params": {}, "body": {}}
+[2025-10-16 13:54:48,702] [INFO] [common] {"type": "request_end", "user": "Anonymous", "method": "OPTIONS", "path": "/users/login/", "status_code": 200}
+[2025-10-16 13:54:49,940] [INFO] [common] {"type": "request_start", "user": "Anonymous", "method": "OPTIONS", "path": "/users/login/", "query_params": {}, "body": {}}
+[2025-10-16 13:54:49,943] [INFO] [common] {"type": "request_end", "user": "Anonymous", "method": "OPTIONS", "path": "/users/login/", "status_code": 200}
+[2025-10-16 13:54:52,482] [INFO] [common] {"type": "request_start", "user": "Anonymous", "method": "OPTIONS", "path": "/users/login/", "query_params": {}, "body": {}}
+[2025-10-16 13:54:52,485] [INFO] [common] {"type": "request_end", "user": "Anonymous", "method": "OPTIONS", "path": "/users/login/", "status_code": 200}
+[2025-10-16 13:56:22,993] [INFO] [common] {"type": "request_start", "user": "Anonymous", "method": "GET", "path": "/users/login/", "query_params": {}, "body": {}}
+[2025-10-16 13:56:22,996] [INFO] [common] {"type": "request_end", "user": "Anonymous", "method": "GET", "path": "/users/login/", "status_code": 405}

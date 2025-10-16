@@ -101,16 +101,20 @@ class LawyerProfile(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     avatar = models.ImageField(upload_to='avatars/lawyers/', blank=True, null=True)
 
+
 class PasswordResetCode(models.Model):
     phone_number = models.CharField(max_length=15)
     code = models.CharField(max_length=6)
     created_at = models.DateTimeField(auto_now_add=True)
+    is_used = models.BooleanField(default=False)
 
     def is_valid(self):
-        """کد فقط ۵ دقیقه اعتبار دارد"""
-        return timezone.now() - self.created_at < timedelta(minutes=2)
+        """کد فقط 2 دقیقه اعتبار دارد و استفاده نشده باشد"""
+        return not self.is_used and (timezone.now() - self.created_at < timedelta(minutes=2))
 
     @staticmethod
-    def generate_code():
-        """کد ۶ رقمی"""
-        return str(random.randint(100000, 999999))
+    def generate_code(phone_number):
+        """کد ۶ رقمی و ذخیره در دیتابیس"""
+        code = str(random.randint(100000, 999999))
+        obj = PasswordResetCode.objects.create(phone_number=phone_number, code=code)
+        return obj

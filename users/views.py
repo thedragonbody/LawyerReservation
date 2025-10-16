@@ -5,6 +5,8 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import get_user_model
 from rest_framework.pagination import PageNumberPagination
+from .models import PasswordResetCode
+from django.contrib.auth.hashers import make_password
 
 from .models import User, ClientProfile, LawyerProfile
 from .serializers import (
@@ -158,10 +160,28 @@ class ForgotPasswordView(generics.GenericAPIView):
 
 class ResetPasswordView(generics.GenericAPIView):
     serializer_class = ResetPasswordSerializer
-    permission_classes = [AllowAny]
 
     def post(self, request):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response({"detail": "رمز عبور با موفقیت تغییر کرد."}, status=status.HTTP_200_OK)
+
+        phone_number = serializer.validated_data['phone_number']
+        code = serializer.validated_data['code']
+        new_password = serializer.validated_data['new_password']
+
+        try:
+            otp_obj = PasswordResetCode.objects.filter(phone_number=phone_number, code=code, is_used=False).latest('created_at')
+        except PasswordResetCode.DoesNotExist:
+            return Response({"detail": "Invalid or expired code."}, status=400)
+
+        if not otp_obj.is_valid():
+            return Response({"detail": "OTP expired or already used."}, status=400)
+
+        user = User.objects.get(phone_number=phone_number)
+        user.password = make_password(new_password)
+        user.save()
+
+        otp_obj.is_used = True
+        otp_obj.save()
+
+        return Response({"detail": "Password reset successfully."}, status=200)
