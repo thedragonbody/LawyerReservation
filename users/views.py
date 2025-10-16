@@ -7,12 +7,14 @@ from django.contrib.auth import get_user_model
 from rest_framework.pagination import PageNumberPagination
 from .models import PasswordResetCode
 from django.contrib.auth.hashers import make_password
+from django.shortcuts import get_object_or_404
 
 from .models import User, ClientProfile, LawyerProfile
 from .serializers import (
     UserSerializer, ClientProfileSerializer, LawyerProfileSerializer,
     ChangePasswordSerializer, LogoutSerializer, LawyerListSerializer,
-    CustomTokenObtainPairSerializer,ForgotPasswordSerializer, ResetPasswordSerializer
+    CustomTokenObtainPairSerializer,ForgotPasswordSerializer, ResetPasswordSerializer,
+    PhoneSerializer, VerifyOTPSerializer
 )
 
 # ================================
@@ -22,28 +24,19 @@ User = get_user_model()
 
 
 class RegisterView(generics.CreateAPIView):
-    queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = [AllowAny]
 
     def perform_create(self, serializer):
-        # ساخت کاربر بدون نیاز به ایمیل یا فعالسازی
-        user = serializer.save(is_active=True)
-        return user
+        user = serializer.save()  # کاربر غیرفعال ایجاد می‌شود
+        code = PasswordResetCode.generate_code(user.phone_number)
 
-    def create(self, request, *args, **kwargs):
-        """
-        override برای ارسال پاسخ ساده‌تر در فرانت
-        """
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        self.perform_create(serializer)
-        headers = self.get_success_headers(serializer.data)
-        return Response(
-            {"message": "ثبت‌نام با موفقیت انجام شد", "user": serializer.data},
-            status=status.HTTP_201_CREATED,
-            headers=headers,
-        )
+        # TODO: ارسال OTP از طریق سرویس پیامک (در حال حاضر print)
+        print(f"📱 کد تأیید ثبت‌نام برای {user.phone_number}: {code}")
+
+        return Response({
+            "detail": "کد تأیید به شماره شما ارسال شد. لطفاً برای فعال‌سازی حساب، OTP را وارد کنید."
+        }, status=201)
 
 # ================================
 # Login (JWT)
@@ -140,23 +133,20 @@ class LawyerListView(generics.ListAPIView):
 # اگر بخوای با SMS واقعی کار کنی، اینجا سرویس Kavenegar یا Ghasedak رو می‌تونی ایمپورت کنی
 
 class ForgotPasswordView(generics.GenericAPIView):
-    serializer_class = ForgotPasswordSerializer
     permission_classes = [AllowAny]
+    serializer_class = PhoneSerializer
 
     def post(self, request):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
+        phone = request.data.get('phone_number')
+        user = get_object_or_404(User, phone_number=phone)
 
-        phone = serializer.validated_data["phone_number"]
-        code = PasswordResetCode.generate_code()
+        # تولید OTP و ذخیره خودکار در دیتابیس
+        code = PasswordResetCode.generate_code(phone)
 
-        PasswordResetCode.objects.create(phone_number=phone, code=code)
-
-        # در حالت واقعی باید SMS ارسال بشه:
+        # TODO: ارسال کد از طریق سرویس پیامک
         print(f"📱 کد تأیید برای {phone}: {code}")
 
-        return Response({"detail": "کد تأیید ارسال شد."}, status=status.HTTP_200_OK)
-
+        return Response({"detail": "کد تأیید برای بازیابی رمز ارسال شد."})
 
 class ResetPasswordView(generics.GenericAPIView):
     serializer_class = ResetPasswordSerializer
@@ -185,3 +175,26 @@ class ResetPasswordView(generics.GenericAPIView):
         otp_obj.save()
 
         return Response({"detail": "Password reset successfully."}, status=200)
+    
+class VerifyOTPView(generics.GenericAPIView):
+    serializer_class = VerifyOTPSerializer
+
+    def post(self, request):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.validated_data['user']
+
+        refresh = RefreshToken.for_user(user)
+        return Response({
+            "detail": "حساب فعال شد و ورود انجام شد.",
+            "user": {
+                "id": user.id,
+                "phone_number": user.phone_number,
+                "first_name": user.first_name,
+                "last_name": user.last_name,
+            },
+            "token": {
+                "refresh": str(refresh),
+                "access": str(refresh.access_token)
+            }
+        }, status=200)

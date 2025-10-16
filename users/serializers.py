@@ -2,18 +2,17 @@ from rest_framework import serializers
 from django.contrib.auth.password_validation import validate_password
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from .models import User, ClientProfile, LawyerProfile
-from .models import PasswordResetCode 
+from .models import User, ClientProfile, LawyerProfile, PasswordResetCode
 
 # ----------------------------
 # User Serializer (با OTP)
 # ----------------------------
 class UserSerializer(serializers.ModelSerializer):
-    password = serializers.CharField(write_only=True, required=True, validators=[validate_password])
+    password = serializers.CharField(write_only=True)
 
     class Meta:
         model = User
-        fields = ['id', 'first_name', 'last_name', 'phone_number', 'password']
+        fields = ['id', 'phone_number', 'first_name', 'last_name', 'password']
 
     def create(self, validated_data):
         user = User.objects.create_user(
@@ -21,9 +20,8 @@ class UserSerializer(serializers.ModelSerializer):
             first_name=validated_data.get('first_name', ''),
             last_name=validated_data.get('last_name', ''),
             password=validated_data['password'],
-            is_active=False  # تا تایید OTP فعال نشود
+            is_active=False  # کاربر در ابتدا غیرفعال است
         )
-        # TODO: ارسال OTP به شماره کاربر
         return user
 
 
@@ -101,7 +99,6 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     @classmethod
     def get_token(cls, user):
         token = super().get_token(user)
-        # اطلاعات اضافی
         token['is_client'] = hasattr(user, 'client_profile')
         token['is_lawyer'] = hasattr(user, 'lawyer_profile')
         return token
@@ -115,7 +112,8 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
             "last_name": self.user.last_name,
         }
         return data
-    
+
+
 # ----------------------------
 # Forgot Password (ارسال OTP)
 # ----------------------------
@@ -155,7 +153,43 @@ class ResetPasswordSerializer(serializers.Serializer):
         user = self.validated_data["user"]
         user.set_password(self.validated_data["new_password"])
         user.save()
-        reset_code = PasswordResetCode.objects.filter(phone_number=self.validated_data["phone_number"], code=self.validated_data["code"]).latest("created_at")
+        reset_code = PasswordResetCode.objects.filter(
+            phone_number=self.validated_data["phone_number"],
+            code=self.validated_data["code"]
+        ).latest("created_at")
         reset_code.is_used = True
         reset_code.save()
         return user
+
+
+# ----------------------------
+# OTP Verification Serializers
+# ----------------------------
+class PhoneSerializer(serializers.Serializer):
+    phone_number = serializers.CharField(max_length=15)
+    code = serializers.CharField(max_length=6, required=False)
+
+
+class VerifyOTPSerializer(serializers.Serializer):
+    phone_number = serializers.CharField(max_length=15)
+    code = serializers.CharField(max_length=6)
+
+    def validate(self, attrs):
+        phone = attrs.get('phone_number')
+        code = attrs.get('code')
+        try:
+            otp = PasswordResetCode.objects.filter(phone_number=phone, code=code, is_used=False).latest('created_at')
+        except PasswordResetCode.DoesNotExist:
+            raise serializers.ValidationError("کد اشتباه یا منقضی است.")
+
+        if not otp.is_valid():
+            raise serializers.ValidationError("کد منقضی شده یا استفاده‌شده است.")
+
+        user = User.objects.get(phone_number=phone)
+        user.is_active = True
+        user.save()
+        otp.is_used = True
+        otp.save()
+
+        attrs['user'] = user
+        return attrs

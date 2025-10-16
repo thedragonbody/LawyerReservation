@@ -164,3 +164,203 @@ Traceback (most recent call last):
            ^^^^^^^^^^^^^^^^^
 NameError: name 'PasswordResetCode' is not defined
 [2025-10-16 13:15:11,428] [ERROR] [django.server] "POST /users/forgot-password/ HTTP/1.1" 500 107144
+[2025-10-16 13:59:04,411] [ERROR] [common] {"type": "exception", "user": "Anonymous", "method": "POST", "path": "/users/forgot-password/", "query_params": {}, "body": "<unreadable body>", "exception": "PasswordResetCode.generate_code() missing 1 required positional argument: 'phone_number'", "traceback": "Traceback (most recent call last):\n  File \"E:\\Python\\Lib\\site-packages\\django\\core\\handlers\\base.py\", line 197, in _get_response\n    response = wrapped_callback(request, *callback_args, **callback_kwargs)\n  File \"E:\\Python\\Lib\\site-packages\\django\\views\\decorators\\csrf.py\", line 65, in _view_wrapper\n    return view_func(request, *args, **kwargs)\n  File \"E:\\Python\\Lib\\site-packages\\django\\views\\generic\\base.py\", line 105, in view\n    return self.dispatch(request, *args, **kwargs)\n           ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\views.py\", line 515, in dispatch\n    response = self.handle_exception(exc)\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\views.py\", line 475, in handle_exception\n    self.raise_uncaught_exception(exc)\n    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\views.py\", line 486, in raise_uncaught_exception\n    raise exc\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\views.py\", line 512, in dispatch\n    response = handler(request, *args, **kwargs)\n  File \"E:\\2VAKIL\\AloVakil\\users\\views.py\", line 151, in post\n    code = PasswordResetCode.generate_code()\nTypeError: PasswordResetCode.generate_code() missing 1 required positional argument: 'phone_number'\n"}
+[2025-10-16 13:59:04,428] [ERROR] [django.request] Internal Server Error: /users/forgot-password/
+Traceback (most recent call last):
+  File "E:\Python\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "E:\Python\Lib\site-packages\django\core\handlers\base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "E:\Python\Lib\site-packages\django\views\decorators\csrf.py", line 65, in _view_wrapper
+    return view_func(request, *args, **kwargs)
+  File "E:\Python\Lib\site-packages\django\views\generic\base.py", line 105, in view
+    return self.dispatch(request, *args, **kwargs)
+           ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\Python\Lib\site-packages\rest_framework\views.py", line 515, in dispatch
+    response = self.handle_exception(exc)
+  File "E:\Python\Lib\site-packages\rest_framework\views.py", line 475, in handle_exception
+    self.raise_uncaught_exception(exc)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^
+  File "E:\Python\Lib\site-packages\rest_framework\views.py", line 486, in raise_uncaught_exception
+    raise exc
+  File "E:\Python\Lib\site-packages\rest_framework\views.py", line 512, in dispatch
+    response = handler(request, *args, **kwargs)
+  File "E:\2VAKIL\AloVakil\users\views.py", line 151, in post
+    code = PasswordResetCode.generate_code()
+TypeError: PasswordResetCode.generate_code() missing 1 required positional argument: 'phone_number'
+[2025-10-16 13:59:04,430] [ERROR] [django.server] "POST /users/forgot-password/ HTTP/1.1" 500 107767
+[2025-10-16 14:02:51,094] [ERROR] [common] {"type": "exception", "user": "Anonymous", "method": "POST", "path": "/users/forgot-password/", "query_params": {}, "body": "<unreadable body>", "exception": "PasswordResetCode.generate_code() missing 1 required positional argument: 'phone_number'", "traceback": "Traceback (most recent call last):\n  File \"E:\\Python\\Lib\\site-packages\\django\\core\\handlers\\base.py\", line 197, in _get_response\n    response = wrapped_callback(request, *callback_args, **callback_kwargs)\n  File \"E:\\Python\\Lib\\site-packages\\django\\views\\decorators\\csrf.py\", line 65, in _view_wrapper\n    return view_func(request, *args, **kwargs)\n  File \"E:\\Python\\Lib\\site-packages\\django\\views\\generic\\base.py\", line 105, in view\n    return self.dispatch(request, *args, **kwargs)\n           ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\views.py\", line 515, in dispatch\n    response = self.handle_exception(exc)\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\views.py\", line 475, in handle_exception\n    self.raise_uncaught_exception(exc)\n    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\views.py\", line 486, in raise_uncaught_exception\n    raise exc\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\views.py\", line 512, in dispatch\n    response = handler(request, *args, **kwargs)\n  File \"E:\\2VAKIL\\AloVakil\\users\\views.py\", line 151, in post\n    code = PasswordResetCode.generate_code()\nTypeError: PasswordResetCode.generate_code() missing 1 required positional argument: 'phone_number'\n"}
+[2025-10-16 14:02:51,113] [ERROR] [django.request] Internal Server Error: /users/forgot-password/
+Traceback (most recent call last):
+  File "E:\Python\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "E:\Python\Lib\site-packages\django\core\handlers\base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "E:\Python\Lib\site-packages\django\views\decorators\csrf.py", line 65, in _view_wrapper
+    return view_func(request, *args, **kwargs)
+  File "E:\Python\Lib\site-packages\django\views\generic\base.py", line 105, in view
+    return self.dispatch(request, *args, **kwargs)
+           ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\Python\Lib\site-packages\rest_framework\views.py", line 515, in dispatch
+    response = self.handle_exception(exc)
+  File "E:\Python\Lib\site-packages\rest_framework\views.py", line 475, in handle_exception
+    self.raise_uncaught_exception(exc)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^
+  File "E:\Python\Lib\site-packages\rest_framework\views.py", line 486, in raise_uncaught_exception
+    raise exc
+  File "E:\Python\Lib\site-packages\rest_framework\views.py", line 512, in dispatch
+    response = handler(request, *args, **kwargs)
+  File "E:\2VAKIL\AloVakil\users\views.py", line 151, in post
+    code = PasswordResetCode.generate_code()
+TypeError: PasswordResetCode.generate_code() missing 1 required positional argument: 'phone_number'
+[2025-10-16 14:02:51,114] [ERROR] [django.server] "POST /users/forgot-password/ HTTP/1.1" 500 107767
+[2025-10-16 20:30:08,460] [ERROR] [common] {"type": "exception", "user": "Anonymous", "method": "GET", "path": "/users/signup/", "query_params": {}, "body": {}, "exception": "Field name `email` is not valid for model `User` in `users.serializers.UserSerializer`.", "traceback": "Traceback (most recent call last):\n  File \"E:\\Python\\Lib\\site-packages\\django\\core\\handlers\\base.py\", line 220, in _get_response\n    response = response.render()\n  File \"E:\\Python\\Lib\\site-packages\\django\\template\\response.py\", line 114, in render\n    self.content = self.rendered_content\n                   ^^^^^^^^^^^^^^^^^^^^^\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\response.py\", line 74, in rendered_content\n    ret = renderer.render(self.data, accepted_media_type, context)\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\renderers.py\", line 731, in render\n    context = self.get_context(data, accepted_media_type, renderer_context)\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\renderers.py\", line 662, in get_context\n    raw_data_post_form = self.get_raw_data_form(data, view, 'POST', request)\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\renderers.py\", line 569, in get_raw_data_form\n    data = serializer.data.copy()\n           ^^^^^^^^^^^^^^^\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\serializers.py\", line 573, in data\n    ret = super().data\n          ^^^^^^^^^^^^\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\serializers.py\", line 255, in data\n    self._data = self.get_initial()\n                 ~~~~~~~~~~~~~~~~^^\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\serializers.py\", line 423, in get_initial\n    for field in self.fields.values()\n                 ^^^^^^^^^^^\n  File \"E:\\Python\\Lib\\site-packages\\django\\utils\\functional.py\", line 47, in __get__\n    res = instance.__dict__[self.name] = self.func(instance)\n                                         ~~~~~~~~~^^^^^^^^^^\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\serializers.py\", line 374, in fields\n    for key, value in self.get_fields().items():\n                      ~~~~~~~~~~~~~~~^^\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\serializers.py\", line 1105, in get_fields\n    field_class, field_kwargs = self.build_field(\n                                ~~~~~~~~~~~~~~~~^\n        source, info, model, depth\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^\n    )\n    ^\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\serializers.py\", line 1251, in build_field\n    return self.build_unknown_field(field_name, model_class)\n           ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\serializers.py\", line 1369, in build_unknown_field\n    raise ImproperlyConfigured(\n    ...<2 lines>...\n    )\ndjango.core.exceptions.ImproperlyConfigured: Field name `email` is not valid for model `User` in `users.serializers.UserSerializer`.\n"}
+[2025-10-16 20:30:08,517] [ERROR] [django.request] Internal Server Error: /users/signup/
+Traceback (most recent call last):
+  File "E:\Python\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "E:\Python\Lib\site-packages\django\core\handlers\base.py", line 220, in _get_response
+    response = response.render()
+  File "E:\Python\Lib\site-packages\django\template\response.py", line 114, in render
+    self.content = self.rendered_content
+                   ^^^^^^^^^^^^^^^^^^^^^
+  File "E:\Python\Lib\site-packages\rest_framework\response.py", line 74, in rendered_content
+    ret = renderer.render(self.data, accepted_media_type, context)
+  File "E:\Python\Lib\site-packages\rest_framework\renderers.py", line 731, in render
+    context = self.get_context(data, accepted_media_type, renderer_context)
+  File "E:\Python\Lib\site-packages\rest_framework\renderers.py", line 662, in get_context
+    raw_data_post_form = self.get_raw_data_form(data, view, 'POST', request)
+  File "E:\Python\Lib\site-packages\rest_framework\renderers.py", line 569, in get_raw_data_form
+    data = serializer.data.copy()
+           ^^^^^^^^^^^^^^^
+  File "E:\Python\Lib\site-packages\rest_framework\serializers.py", line 573, in data
+    ret = super().data
+          ^^^^^^^^^^^^
+  File "E:\Python\Lib\site-packages\rest_framework\serializers.py", line 255, in data
+    self._data = self.get_initial()
+                 ~~~~~~~~~~~~~~~~^^
+  File "E:\Python\Lib\site-packages\rest_framework\serializers.py", line 423, in get_initial
+    for field in self.fields.values()
+                 ^^^^^^^^^^^
+  File "E:\Python\Lib\site-packages\django\utils\functional.py", line 47, in __get__
+    res = instance.__dict__[self.name] = self.func(instance)
+                                         ~~~~~~~~~^^^^^^^^^^
+  File "E:\Python\Lib\site-packages\rest_framework\serializers.py", line 374, in fields
+    for key, value in self.get_fields().items():
+                      ~~~~~~~~~~~~~~~^^
+  File "E:\Python\Lib\site-packages\rest_framework\serializers.py", line 1105, in get_fields
+    field_class, field_kwargs = self.build_field(
+                                ~~~~~~~~~~~~~~~~^
+        source, info, model, depth
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "E:\Python\Lib\site-packages\rest_framework\serializers.py", line 1251, in build_field
+    return self.build_unknown_field(field_name, model_class)
+           ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\Python\Lib\site-packages\rest_framework\serializers.py", line 1369, in build_unknown_field
+    raise ImproperlyConfigured(
+    ...<2 lines>...
+    )
+django.core.exceptions.ImproperlyConfigured: Field name `email` is not valid for model `User` in `users.serializers.UserSerializer`.
+[2025-10-16 20:30:08,519] [ERROR] [django.server] "GET /users/signup/ HTTP/1.1" 500 146620
+[2025-10-16 20:31:02,434] [ERROR] [common] {"type": "exception", "user": "Anonymous", "method": "GET", "path": "/users/signup/", "query_params": {}, "body": {}, "exception": "Field name `email` is not valid for model `User` in `users.serializers.UserSerializer`.", "traceback": "Traceback (most recent call last):\n  File \"E:\\Python\\Lib\\site-packages\\django\\core\\handlers\\base.py\", line 220, in _get_response\n    response = response.render()\n  File \"E:\\Python\\Lib\\site-packages\\django\\template\\response.py\", line 114, in render\n    self.content = self.rendered_content\n                   ^^^^^^^^^^^^^^^^^^^^^\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\response.py\", line 74, in rendered_content\n    ret = renderer.render(self.data, accepted_media_type, context)\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\renderers.py\", line 731, in render\n    context = self.get_context(data, accepted_media_type, renderer_context)\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\renderers.py\", line 662, in get_context\n    raw_data_post_form = self.get_raw_data_form(data, view, 'POST', request)\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\renderers.py\", line 569, in get_raw_data_form\n    data = serializer.data.copy()\n           ^^^^^^^^^^^^^^^\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\serializers.py\", line 573, in data\n    ret = super().data\n          ^^^^^^^^^^^^\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\serializers.py\", line 255, in data\n    self._data = self.get_initial()\n                 ~~~~~~~~~~~~~~~~^^\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\serializers.py\", line 423, in get_initial\n    for field in self.fields.values()\n                 ^^^^^^^^^^^\n  File \"E:\\Python\\Lib\\site-packages\\django\\utils\\functional.py\", line 47, in __get__\n    res = instance.__dict__[self.name] = self.func(instance)\n                                         ~~~~~~~~~^^^^^^^^^^\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\serializers.py\", line 374, in fields\n    for key, value in self.get_fields().items():\n                      ~~~~~~~~~~~~~~~^^\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\serializers.py\", line 1105, in get_fields\n    field_class, field_kwargs = self.build_field(\n                                ~~~~~~~~~~~~~~~~^\n        source, info, model, depth\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^\n    )\n    ^\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\serializers.py\", line 1251, in build_field\n    return self.build_unknown_field(field_name, model_class)\n           ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\serializers.py\", line 1369, in build_unknown_field\n    raise ImproperlyConfigured(\n    ...<2 lines>...\n    )\ndjango.core.exceptions.ImproperlyConfigured: Field name `email` is not valid for model `User` in `users.serializers.UserSerializer`.\n"}
+[2025-10-16 20:31:02,459] [ERROR] [django.request] Internal Server Error: /users/signup/
+Traceback (most recent call last):
+  File "E:\Python\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "E:\Python\Lib\site-packages\django\core\handlers\base.py", line 220, in _get_response
+    response = response.render()
+  File "E:\Python\Lib\site-packages\django\template\response.py", line 114, in render
+    self.content = self.rendered_content
+                   ^^^^^^^^^^^^^^^^^^^^^
+  File "E:\Python\Lib\site-packages\rest_framework\response.py", line 74, in rendered_content
+    ret = renderer.render(self.data, accepted_media_type, context)
+  File "E:\Python\Lib\site-packages\rest_framework\renderers.py", line 731, in render
+    context = self.get_context(data, accepted_media_type, renderer_context)
+  File "E:\Python\Lib\site-packages\rest_framework\renderers.py", line 662, in get_context
+    raw_data_post_form = self.get_raw_data_form(data, view, 'POST', request)
+  File "E:\Python\Lib\site-packages\rest_framework\renderers.py", line 569, in get_raw_data_form
+    data = serializer.data.copy()
+           ^^^^^^^^^^^^^^^
+  File "E:\Python\Lib\site-packages\rest_framework\serializers.py", line 573, in data
+    ret = super().data
+          ^^^^^^^^^^^^
+  File "E:\Python\Lib\site-packages\rest_framework\serializers.py", line 255, in data
+    self._data = self.get_initial()
+                 ~~~~~~~~~~~~~~~~^^
+  File "E:\Python\Lib\site-packages\rest_framework\serializers.py", line 423, in get_initial
+    for field in self.fields.values()
+                 ^^^^^^^^^^^
+  File "E:\Python\Lib\site-packages\django\utils\functional.py", line 47, in __get__
+    res = instance.__dict__[self.name] = self.func(instance)
+                                         ~~~~~~~~~^^^^^^^^^^
+  File "E:\Python\Lib\site-packages\rest_framework\serializers.py", line 374, in fields
+    for key, value in self.get_fields().items():
+                      ~~~~~~~~~~~~~~~^^
+  File "E:\Python\Lib\site-packages\rest_framework\serializers.py", line 1105, in get_fields
+    field_class, field_kwargs = self.build_field(
+                                ~~~~~~~~~~~~~~~~^
+        source, info, model, depth
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "E:\Python\Lib\site-packages\rest_framework\serializers.py", line 1251, in build_field
+    return self.build_unknown_field(field_name, model_class)
+           ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\Python\Lib\site-packages\rest_framework\serializers.py", line 1369, in build_unknown_field
+    raise ImproperlyConfigured(
+    ...<2 lines>...
+    )
+django.core.exceptions.ImproperlyConfigured: Field name `email` is not valid for model `User` in `users.serializers.UserSerializer`.
+[2025-10-16 20:31:02,461] [ERROR] [django.server] "GET /users/signup/ HTTP/1.1" 500 146757
+[2025-10-16 20:31:03,754] [ERROR] [common] {"type": "exception", "user": "Anonymous", "method": "GET", "path": "/users/signup/", "query_params": {}, "body": {}, "exception": "Field name `email` is not valid for model `User` in `users.serializers.UserSerializer`.", "traceback": "Traceback (most recent call last):\n  File \"E:\\Python\\Lib\\site-packages\\django\\core\\handlers\\base.py\", line 220, in _get_response\n    response = response.render()\n  File \"E:\\Python\\Lib\\site-packages\\django\\template\\response.py\", line 114, in render\n    self.content = self.rendered_content\n                   ^^^^^^^^^^^^^^^^^^^^^\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\response.py\", line 74, in rendered_content\n    ret = renderer.render(self.data, accepted_media_type, context)\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\renderers.py\", line 731, in render\n    context = self.get_context(data, accepted_media_type, renderer_context)\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\renderers.py\", line 662, in get_context\n    raw_data_post_form = self.get_raw_data_form(data, view, 'POST', request)\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\renderers.py\", line 569, in get_raw_data_form\n    data = serializer.data.copy()\n           ^^^^^^^^^^^^^^^\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\serializers.py\", line 573, in data\n    ret = super().data\n          ^^^^^^^^^^^^\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\serializers.py\", line 255, in data\n    self._data = self.get_initial()\n                 ~~~~~~~~~~~~~~~~^^\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\serializers.py\", line 423, in get_initial\n    for field in self.fields.values()\n                 ^^^^^^^^^^^\n  File \"E:\\Python\\Lib\\site-packages\\django\\utils\\functional.py\", line 47, in __get__\n    res = instance.__dict__[self.name] = self.func(instance)\n                                         ~~~~~~~~~^^^^^^^^^^\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\serializers.py\", line 374, in fields\n    for key, value in self.get_fields().items():\n                      ~~~~~~~~~~~~~~~^^\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\serializers.py\", line 1105, in get_fields\n    field_class, field_kwargs = self.build_field(\n                                ~~~~~~~~~~~~~~~~^\n        source, info, model, depth\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^\n    )\n    ^\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\serializers.py\", line 1251, in build_field\n    return self.build_unknown_field(field_name, model_class)\n           ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\serializers.py\", line 1369, in build_unknown_field\n    raise ImproperlyConfigured(\n    ...<2 lines>...\n    )\ndjango.core.exceptions.ImproperlyConfigured: Field name `email` is not valid for model `User` in `users.serializers.UserSerializer`.\n"}
+[2025-10-16 20:31:03,773] [ERROR] [django.request] Internal Server Error: /users/signup/
+Traceback (most recent call last):
+  File "E:\Python\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "E:\Python\Lib\site-packages\django\core\handlers\base.py", line 220, in _get_response
+    response = response.render()
+  File "E:\Python\Lib\site-packages\django\template\response.py", line 114, in render
+    self.content = self.rendered_content
+                   ^^^^^^^^^^^^^^^^^^^^^
+  File "E:\Python\Lib\site-packages\rest_framework\response.py", line 74, in rendered_content
+    ret = renderer.render(self.data, accepted_media_type, context)
+  File "E:\Python\Lib\site-packages\rest_framework\renderers.py", line 731, in render
+    context = self.get_context(data, accepted_media_type, renderer_context)
+  File "E:\Python\Lib\site-packages\rest_framework\renderers.py", line 662, in get_context
+    raw_data_post_form = self.get_raw_data_form(data, view, 'POST', request)
+  File "E:\Python\Lib\site-packages\rest_framework\renderers.py", line 569, in get_raw_data_form
+    data = serializer.data.copy()
+           ^^^^^^^^^^^^^^^
+  File "E:\Python\Lib\site-packages\rest_framework\serializers.py", line 573, in data
+    ret = super().data
+          ^^^^^^^^^^^^
+  File "E:\Python\Lib\site-packages\rest_framework\serializers.py", line 255, in data
+    self._data = self.get_initial()
+                 ~~~~~~~~~~~~~~~~^^
+  File "E:\Python\Lib\site-packages\rest_framework\serializers.py", line 423, in get_initial
+    for field in self.fields.values()
+                 ^^^^^^^^^^^
+  File "E:\Python\Lib\site-packages\django\utils\functional.py", line 47, in __get__
+    res = instance.__dict__[self.name] = self.func(instance)
+                                         ~~~~~~~~~^^^^^^^^^^
+  File "E:\Python\Lib\site-packages\rest_framework\serializers.py", line 374, in fields
+    for key, value in self.get_fields().items():
+                      ~~~~~~~~~~~~~~~^^
+  File "E:\Python\Lib\site-packages\rest_framework\serializers.py", line 1105, in get_fields
+    field_class, field_kwargs = self.build_field(
+                                ~~~~~~~~~~~~~~~~^
+        source, info, model, depth
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "E:\Python\Lib\site-packages\rest_framework\serializers.py", line 1251, in build_field
+    return self.build_unknown_field(field_name, model_class)
+           ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\Python\Lib\site-packages\rest_framework\serializers.py", line 1369, in build_unknown_field
+    raise ImproperlyConfigured(
+    ...<2 lines>...
+    )
+django.core.exceptions.ImproperlyConfigured: Field name `email` is not valid for model `User` in `users.serializers.UserSerializer`.
+[2025-10-16 20:31:03,775] [ERROR] [django.server] "GET /users/signup/ HTTP/1.1" 500 146757
