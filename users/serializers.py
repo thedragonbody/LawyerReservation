@@ -3,6 +3,7 @@ from django.contrib.auth.password_validation import validate_password
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from .models import User, ClientProfile, LawyerProfile
+from .models import PasswordResetCode 
 
 # ----------------------------
 # User Serializer (با OTP)
@@ -114,3 +115,44 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
             "last_name": self.user.last_name,
         }
         return data
+    
+# ----------------------------
+# Forgot Password (ارسال OTP)
+# ----------------------------
+class ForgotPasswordSerializer(serializers.Serializer):
+    phone_number = serializers.CharField(max_length=15)
+
+    def validate_phone_number(self, value):
+        if not User.objects.filter(phone_number=value).exists():
+            raise serializers.ValidationError("کاربری با این شماره یافت نشد.")
+        return value
+
+
+# ----------------------------
+# Reset Password (تأیید OTP و تنظیم رمز)
+# ----------------------------
+class ResetPasswordSerializer(serializers.Serializer):
+    phone_number = serializers.CharField(max_length=15)
+    code = serializers.CharField(max_length=6)
+    new_password = serializers.CharField(min_length=8, validators=[validate_password])
+
+    def validate(self, attrs):
+        phone = attrs.get("phone_number")
+        code = attrs.get("code")
+
+        try:
+            reset_code = PasswordResetCode.objects.filter(phone_number=phone, code=code).latest("created_at")
+        except PasswordResetCode.DoesNotExist:
+            raise serializers.ValidationError("کد وارد شده معتبر نیست.")
+
+        if not reset_code.is_valid():
+            raise serializers.ValidationError("کد منقضی شده است.")
+
+        attrs["user"] = User.objects.get(phone_number=phone)
+        return attrs
+
+    def save(self, **kwargs):
+        user = self.validated_data["user"]
+        user.set_password(self.validated_data["new_password"])
+        user.save()
+        return user

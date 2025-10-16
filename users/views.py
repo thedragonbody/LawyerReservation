@@ -3,28 +3,45 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from rest_framework_simplejwt.tokens import RefreshToken
+from django.contrib.auth import get_user_model
+from rest_framework.pagination import PageNumberPagination
 
 from .models import User, ClientProfile, LawyerProfile
 from .serializers import (
     UserSerializer, ClientProfileSerializer, LawyerProfileSerializer,
     ChangePasswordSerializer, LogoutSerializer, LawyerListSerializer,
-    CustomTokenObtainPairSerializer
+    CustomTokenObtainPairSerializer,ForgotPasswordSerializer, ResetPasswordSerializer
 )
 
 # ================================
 # Sign Up (ثبت نام با OTP)
 # ================================
+User = get_user_model()
+
+
 class RegisterView(generics.CreateAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = [AllowAny]
 
     def perform_create(self, serializer):
-        user = serializer.save()
-        # TODO: ارسال OTP به شماره کاربر
-        # مثال: send_otp(user.phone_number)
+        # ساخت کاربر بدون نیاز به ایمیل یا فعالسازی
+        user = serializer.save(is_active=True)
         return user
 
+    def create(self, request, *args, **kwargs):
+        """
+        override برای ارسال پاسخ ساده‌تر در فرانت
+        """
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        headers = self.get_success_headers(serializer.data)
+        return Response(
+            {"message": "ثبت‌نام با موفقیت انجام شد", "user": serializer.data},
+            status=status.HTTP_201_CREATED,
+            headers=headers,
+        )
 
 # ================================
 # Login (JWT)
@@ -106,7 +123,6 @@ class ChangePasswordView(generics.UpdateAPIView):
 # ================================
 # List of Lawyers (با pagination)
 # ================================
-from rest_framework.pagination import PageNumberPagination
 
 class LawyerListPagination(PageNumberPagination):
     page_size = 10
@@ -118,3 +134,34 @@ class LawyerListView(generics.ListAPIView):
     serializer_class = LawyerListSerializer
     permission_classes = [AllowAny]
     pagination_class = LawyerListPagination
+
+# اگر بخوای با SMS واقعی کار کنی، اینجا سرویس Kavenegar یا Ghasedak رو می‌تونی ایمپورت کنی
+
+class ForgotPasswordView(generics.GenericAPIView):
+    serializer_class = ForgotPasswordSerializer
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        phone = serializer.validated_data["phone_number"]
+        code = PasswordResetCode.generate_code()
+
+        PasswordResetCode.objects.create(phone_number=phone, code=code)
+
+        # در حالت واقعی باید SMS ارسال بشه:
+        print(f"📱 کد تأیید برای {phone}: {code}")
+
+        return Response({"detail": "کد تأیید ارسال شد."}, status=status.HTTP_200_OK)
+
+
+class ResetPasswordView(generics.GenericAPIView):
+    serializer_class = ResetPasswordSerializer
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response({"detail": "رمز عبور با موفقیت تغییر کرد."}, status=status.HTTP_200_OK)

@@ -3,6 +3,8 @@ from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, BaseU
 from django.utils import timezone
 import random
 from django.utils.translation import gettext_lazy as _
+from django.utils import timezone
+from datetime import timedelta
 
 # ================= Custom UserManager =================
 class UserManager(BaseUserManager):
@@ -98,3 +100,17 @@ class LawyerProfile(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     avatar = models.ImageField(upload_to='avatars/lawyers/', blank=True, null=True)
+
+class PasswordResetCode(models.Model):
+    phone_number = models.CharField(max_length=15)
+    code = models.CharField(max_length=6)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def is_valid(self):
+        """کد فقط ۵ دقیقه اعتبار دارد"""
+        return timezone.now() - self.created_at < timedelta(minutes=2)
+
+    @staticmethod
+    def generate_code():
+        """کد ۶ رقمی"""
+        return str(random.randint(100000, 999999))
