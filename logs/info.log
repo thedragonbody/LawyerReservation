@@ -441,3 +441,25 @@
 [2025-10-16 21:51:30,414] [INFO] [common] {"type": "request_end", "user": "Anonymous", "method": "GET", "path": "/appointments/dashboard/stats/", "status_code": 200}
 [2025-10-16 21:51:52,726] [INFO] [common] {"type": "request_start", "user": "Anonymous", "method": "GET", "path": "/appointments/dashboard/lawyer/", "query_params": {}, "body": {}}
 [2025-10-16 21:51:52,739] [INFO] [common] {"type": "request_end", "user": "Anonymous", "method": "GET", "path": "/appointments/dashboard/lawyer/", "status_code": 200}
+[2025-10-17 14:44:14,790] [INFO] [common] {"type": "request_start", "user": "Anonymous", "method": "GET", "path": "/", "query_params": {}, "body": {}}
+[2025-10-17 14:44:14,804] [INFO] [common] {"type": "request_end", "user": "Anonymous", "method": "GET", "path": "/", "status_code": 404}
+[2025-10-17 14:44:14,926] [INFO] [common] {"type": "request_start", "user": "Anonymous", "method": "GET", "path": "/favicon.ico", "query_params": {}, "body": {}}
+[2025-10-17 14:44:14,929] [INFO] [common] {"type": "request_end", "user": "Anonymous", "method": "GET", "path": "/favicon.ico", "status_code": 404}
+[2025-10-17 14:44:26,559] [INFO] [common] {"type": "request_start", "user": "Anonymous", "method": "GET", "path": "/admin/", "query_params": {}, "body": {}}
+[2025-10-17 14:44:26,642] [INFO] [common] {"type": "request_end", "user": "Anonymous", "method": "GET", "path": "/admin/", "status_code": 200}
+[2025-10-17 14:44:37,765] [INFO] [common] {"type": "request_start", "user": "Anonymous", "method": "GET", "path": "/users/", "query_params": {}, "body": {}}
+[2025-10-17 14:44:37,768] [INFO] [common] {"type": "request_end", "user": "Anonymous", "method": "GET", "path": "/users/", "status_code": 404}
+[2025-10-17 14:44:42,926] [INFO] [common] {"type": "request_start", "user": "Anonymous", "method": "GET", "path": "/users/signup/", "query_params": {}, "body": {}}
+[2025-10-17 14:44:43,020] [INFO] [common] {"type": "request_end", "user": "Anonymous", "method": "GET", "path": "/users/signup/", "status_code": 405}
+[2025-10-17 14:45:14,570] [INFO] [common] {"type": "request_start", "user": "Anonymous", "method": "GET", "path": "/users/signup/", "query_params": {}, "body": {"username": "amin@example.com", "password": "amin1234"}}
+[2025-10-17 14:45:14,570] [INFO] [common] {"type": "request_end", "user": "Anonymous", "method": "GET", "path": "/users/signup/", "status_code": 401}
+[2025-10-17 14:45:29,675] [INFO] [common] {"type": "request_start", "user": "Anonymous", "method": "GET", "path": "/users/signup/", "query_params": {}, "body": {"username": "amin@example.com", "password": "amin1234"}}
+[2025-10-17 14:45:29,675] [INFO] [common] {"type": "request_end", "user": "Anonymous", "method": "GET", "path": "/users/signup/", "status_code": 401}
+[2025-10-17 14:46:06,950] [INFO] [common] {"type": "request_start", "user": "Anonymous", "method": "GET", "path": "/users/signup/", "query_params": {}, "body": {"username": "09906839251", "password": "amin1234"}}
+[2025-10-17 14:46:06,951] [INFO] [common] {"type": "request_end", "user": "Anonymous", "method": "GET", "path": "/users/signup/", "status_code": 401}
+[2025-10-17 14:46:21,286] [INFO] [common] {"type": "request_start", "user": "Anonymous", "method": "GET", "path": "/users/signup/", "query_params": {}, "body": {"username": "09906839251", "password": "amin1234"}}
+[2025-10-17 14:46:21,286] [INFO] [common] {"type": "request_end", "user": "Anonymous", "method": "GET", "path": "/users/signup/", "status_code": 401}
+[2025-10-17 14:46:34,372] [INFO] [common] {"type": "request_start", "user": "Anonymous", "method": "GET", "path": "/users/signup/", "query_params": {}, "body": {"username": "09906839251", "password": "amin1234"}}
+[2025-10-17 14:46:34,372] [INFO] [common] {"type": "request_end", "user": "Anonymous", "method": "GET", "path": "/users/signup/", "status_code": 405}
+[2025-10-17 14:47:07,514] [INFO] [common] {"type": "request_start", "user": "Anonymous", "method": "GET", "path": "/users/signup/", "query_params": {}, "body": {"username": "09906839251", "password": "amin1234"}}
+[2025-10-17 14:47:07,514] [INFO] [common] {"type": "request_end", "user": "Anonymous", "method": "GET", "path": "/users/signup/", "status_code": 405}

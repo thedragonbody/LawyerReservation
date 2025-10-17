@@ -6,12 +6,13 @@ from rest_framework.exceptions import ValidationError
 from notifications.models import Notification
 from rest_framework.views import APIView
 
+from common.models import LawyerClientRelation
 from .models import Slot, Appointment
 from .serializers import AppointmentSerializer
 from common.choices import AppointmentStatus
 from payments.models import Payment
 from payments.utils import create_payment_request, verify_payment_request
-from common.utils import send_sms
+from common.utils import send_sms, send_user_notification
 
 
 class AppointmentCreateView(generics.GenericAPIView):
@@ -120,12 +121,23 @@ class AppointmentPaymentCallbackView(APIView):
             payment.provider_data = payment_response
             payment.save()
 
+            # به‌روزرسانی رابطه Lawyer ↔ Client
+            relation, _ = LawyerClientRelation.objects.get_or_create(
+                lawyer=slot.lawyer,
+                client=payment.user.client_profile,
+            )
+            relation.is_active = True
+            relation.touch()  # آپدیت last_interaction
+            relation.save()
+
         # Notification و پیامک
-        Notification.objects.create(
+        send_user_notification(
             user=appointment.client.user,
             title="Appointment Confirmed",
-            message=f"Your appointment on {slot.start_time} has been confirmed."
+            message=f"Your appointment on {slot.start_time} with {slot.lawyer.user.get_full_name()} has been confirmed.",
+            link=None
         )
+
         send_sms(
             appointment.client.user.phone_number,
             f"پرداخت موفق! وقت شما {slot.start_time} با {slot.lawyer.user.get_full_name()} تایید شد."

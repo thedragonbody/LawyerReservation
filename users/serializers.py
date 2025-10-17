@@ -3,6 +3,8 @@ from django.contrib.auth.password_validation import validate_password
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from .models import User, ClientProfile, LawyerProfile, PasswordResetCode
+from django.db import transaction
+from django.contrib.auth.hashers import make_password
 
 # ----------------------------
 # User Serializer (با OTP)
@@ -151,16 +153,30 @@ class ResetPasswordSerializer(serializers.Serializer):
 
     def save(self, **kwargs):
         user = self.validated_data["user"]
-        user.set_password(self.validated_data["new_password"])
-        user.save()
-        reset_code = PasswordResetCode.objects.filter(
-            phone_number=self.validated_data["phone_number"],
-            code=self.validated_data["code"]
-        ).latest("created_at")
-        reset_code.is_used = True
-        reset_code.save()
-        return user
+        phone_number = self.validated_data["phone_number"]
+        code = self.validated_data["code"]
+        new_password = self.validated_data["new_password"]
 
+        with transaction.atomic():
+            # گرفتن آخرین OTP معتبر
+            otp_obj = PasswordResetCode.objects.select_for_update().filter(
+                phone_number=phone_number,
+                code=code,
+                is_used=False
+            ).latest("created_at")
+
+            if not otp_obj.is_valid():
+                raise serializers.ValidationError("کد منقضی شده یا استفاده شده است.")
+
+            # تغییر رمز کاربر
+            user.password = make_password(new_password)
+            user.save(update_fields=["password"])
+
+            # علامت‌گذاری OTP به عنوان استفاده‌شده
+            otp_obj.is_used = True
+            otp_obj.save(update_fields=["is_used"])
+
+        return user
 
 # ----------------------------
 # OTP Verification Serializers
