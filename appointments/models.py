@@ -9,6 +9,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from appointments.utils import create_meeting_link
 from notifications.models import Notification
 from common.utils import send_sms
+from django.db.models import Prefetch
 
 class Slot(BaseModel):
     lawyer = models.ForeignKey(LawyerProfile, on_delete=models.CASCADE, related_name='slots')
@@ -172,3 +173,14 @@ class Appointment(BaseModel):
         self.status = AppointmentStatus.COMPLETED
         self.save(update_fields=["status"])
         return True
+    
+    def get_queryset(self):
+        qs = Appointment.objects.select_related(
+            "client",
+            "client__user",
+            "lawyer",
+            "lawyer__user",
+            "slot"
+        )
+        # اگر نیاز به فیلتر یا ordering دارید اضافه کنید
+        return qs.order_by("-slot__start_time")

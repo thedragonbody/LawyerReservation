@@ -21,7 +21,6 @@ CACHE_TIMEOUT_RESULTS = 60 * 5  # 5 دقیقه
 CACHE_TIMEOUT_SUGGEST = 60 * 3   # 3 دقیقه
 RATE_LIMIT = 50                  # 50 درخواست در دقیقه
 
-
 # ---------------------- Helper Functions ----------------------
 
 def _safe_redis_get(cache_conn, key):
@@ -33,17 +32,17 @@ def _safe_redis_get(cache_conn, key):
         if isinstance(val, bytes):
             val = val.decode("utf-8")
         return json.loads(val)
-    except Exception:
+    except Exception as e:
+        # Log خطا برای debug
+        print(f"[Warning] Redis GET failed for key {key}: {e}")
         return None
-
 
 def _safe_redis_set(cache_conn, key, value, ex=None):
     """ذخیره امن در Redis با json.dumps"""
     try:
         cache_conn.set(key, json.dumps(value, default=str), ex=ex)
-    except Exception:
-        pass
-
+    except Exception as e:
+        print(f"[Warning] Redis SET failed for key {key}: {e}")
 
 def _client_ip(request):
     """برگرداندن IP واقعی کاربر"""
@@ -51,7 +50,6 @@ def _client_ip(request):
     if xff:
         return xff.split(",")[0].strip()
     return request.META.get("REMOTE_ADDR", "anon")
-
 
 # ---------------------- Views ----------------------
 
@@ -76,7 +74,7 @@ class GlobalSearchView(APIView):
         key_base = f"{normalized_q}:{entity_type or 'all'}:{status_filter or ''}:{from_date or ''}:{to_date or ''}"
         cache_key = "search_global:" + hashlib.md5(key_base.encode()).hexdigest()
 
-        # 🔹 Rate-limit
+        # 🔹 Rate-limit با atomic pipeline
         user_id = f"user:{request.user.id}" if request.user.is_authenticated else f"ip:{_client_ip(request)}"
         rate_key = f"search_rate:{user_id}"
 
@@ -107,8 +105,8 @@ class GlobalSearchView(APIView):
                     normalized_query=normalized_q,
                     defaults={"query": raw_query}
                 )
-            except Exception:
-                pass
+            except Exception as e:
+                print(f"[Warning] Failed to save search history: {e}")
 
         # تابع ساخت query در Elasticsearch
         def build_search(doc_class, fields, status=None, from_date=None, to_date=None):
@@ -130,7 +128,8 @@ class GlobalSearchView(APIView):
             try:
                 hits = doc_class.search().query(q).execute()
                 return [hit.to_dict() for hit in hits]
-            except Exception:
+            except Exception as e:
+                print(f"[Warning] Elasticsearch query failed for {doc_class.__name__}: {e}")
                 return []
 
         # مدل‌های قابل جستجو
@@ -153,7 +152,6 @@ class GlobalSearchView(APIView):
         _safe_redis_set(cache_conn, cache_key, results, ex=CACHE_TIMEOUT_RESULTS)
         return Response({"query": raw_query, "results": results}, status=200)
 
-
 # 🕒 Search History
 class SearchHistoryListView(APIView):
     permission_classes = [IsAuthenticated]
@@ -167,14 +165,15 @@ class SearchHistoryListView(APIView):
             return Response({"history": cached}, status=200)
 
         try:
-            searches = SearchHistory.objects.filter(user=request.user).order_by("-created_at").values("query", "created_at")
+            # بهینه: select_related برای user
+            searches = SearchHistory.objects.filter(user=request.user).select_related("user").order_by("-created_at").values("query", "created_at")
             data = list(searches)
-        except Exception:
+        except Exception as e:
+            print(f"[Warning] Failed to fetch search history: {e}")
             data = []
 
         _safe_redis_set(cache_conn, cache_key, data, ex=CACHE_TIMEOUT_SUGGEST)
         return Response({"history": data}, status=200)
-
 
 # 💡 Search Suggestions
 class SearchSuggestionsView(APIView):
@@ -195,21 +194,24 @@ class SearchSuggestionsView(APIView):
 
         try:
             # جستجو در تاریخچه اخیر کاربر
-            recent_qs = SearchHistory.objects.filter(user=request.user, query__icontains=raw_query)
+            recent_qs = SearchHistory.objects.filter(user=request.user, query__icontains=raw_query).select_related("user")
             recent_searches = recent_qs.order_by("-created_at").values_list("query", flat=True)[:10]
             recent_list = list(recent_searches)
 
             # جستجو در محبوب‌ترین کوئری‌ها
-            popular_qs = SearchHistory.objects.filter(query__icontains=raw_query)
+            popular_qs = SearchHistory.objects.filter(query__icontains=raw_query).select_related("user")
             popular_searches = popular_qs.values("query").annotate(count=Count("id")).order_by("-count")[:10].values_list("query", flat=True)
             popular_list = list(popular_searches)
-
-        except Exception:
+        except Exception as e:
+            print(f"[Warning] Failed to fetch search suggestions: {e}")
             recent_list, popular_list = [], []
 
         # ترکیب و حذف تکراری‌ها
         combined = list(dict.fromkeys(recent_list + popular_list))
         suggestions = [s for s in combined if raw_query.lower() in s.lower()]
+
+        # محدود کردن تعداد خروجی برای performance
+        suggestions = suggestions[:20]
 
         _safe_redis_set(cache_conn, cache_key, suggestions, ex=CACHE_TIMEOUT_SUGGEST)
         return Response({"suggestions": suggestions}, status=200)

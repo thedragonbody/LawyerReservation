@@ -6,7 +6,7 @@ class LawyerReviewSerializer(serializers.ModelSerializer):
     lawyer_name = serializers.CharField(source="relation.lawyer.user.get_full_name", read_only=True)
     client_name = serializers.CharField(source="relation.client.user.get_full_name", read_only=True)
     short_comment = serializers.SerializerMethodField(read_only=True)
-    can_reply = serializers.SerializerMethodField(read_only=True)
+    can_reply = serializers.SerializerMethodField(read_only=True)    
 
     class Meta:
         model = LawyerReview
@@ -56,3 +56,17 @@ class LawyerReviewSerializer(serializers.ModelSerializer):
 
         user = request.user
         return user == obj.relation.client.user or user == obj.relation.lawyer.user or user.is_staff
+    
+    def get_queryset(self):
+        user = self.request.user
+        qs = LawyerReview.objects.select_related(
+            "relation",
+            "relation__lawyer",
+            "relation__lawyer__user",
+            "relation__client",
+            "relation__client__user"
+        ).order_by("-created_at")
+        
+        if user.is_authenticated and not user.is_staff:
+            qs = qs.filter(is_approved=True)
+        return qs
