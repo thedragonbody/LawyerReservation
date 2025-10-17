@@ -10,6 +10,7 @@ from .views import (
     LawyerListView,
     ForgotPasswordView,   
     ResetPasswordView,    
+    VerifyOTPView,
 )
 
 urlpatterns = [
@@ -18,6 +19,7 @@ urlpatterns = [
     path("login/", LoginView.as_view(), name="login"),
     path("logout/", LogoutView.as_view(), name="logout"),
     path("token/refresh/", RefreshTokenView.as_view(), name="token_refresh"),
+    path("verify-otp/", VerifyOTPView.as_view(), name="verify_otp"),
 
     # ---------------- Profiles ----------------
     path("client-profile/", ClientProfileView.as_view(), name="client_profile"),

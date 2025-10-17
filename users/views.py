@@ -184,7 +184,9 @@ class VerifyOTPView(generics.GenericAPIView):
         serializer.is_valid(raise_exception=True)
         user = serializer.validated_data['user']
 
+        # ایجاد توکن JWT برای ورود همزمان
         refresh = RefreshToken.for_user(user)
+
         return Response({
             "detail": "حساب فعال شد و ورود انجام شد.",
             "user": {
