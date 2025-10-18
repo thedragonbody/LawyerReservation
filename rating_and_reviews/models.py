@@ -1,5 +1,6 @@
 from django.db import models
-from users.models import LawyerProfile, ClientProfile
+from lawyer_profile.models import LawyerProfile
+from client_profile.models import ClientProfile
 from common.models import LawyerClientRelation
 
 class LawyerReview(models.Model):

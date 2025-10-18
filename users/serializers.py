@@ -2,7 +2,7 @@ from rest_framework import serializers
 from django.contrib.auth.password_validation import validate_password
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from .models import User, ClientProfile, LawyerProfile, PasswordResetCode
+from .models import User, PasswordResetCode
 from django.db import transaction
 from django.contrib.auth.hashers import make_password
 
@@ -25,35 +25,6 @@ class UserSerializer(serializers.ModelSerializer):
             is_active=False  # کاربر در ابتدا غیرفعال است
         )
         return user
-
-
-# ----------------------------
-# Client Profile Serializer
-# ----------------------------
-class ClientProfileSerializer(serializers.ModelSerializer):
-    created_at = serializers.DateTimeField(read_only=True)
-    updated_at = serializers.DateTimeField(read_only=True)
-
-    class Meta:
-        model = ClientProfile
-        fields = ['national_id', 'created_at', 'updated_at', 'avatar']
-
-
-# ----------------------------
-# Lawyer Profile Serializer
-# ----------------------------
-class LawyerProfileSerializer(serializers.ModelSerializer):
-    created_at = serializers.DateTimeField(read_only=True)
-    updated_at = serializers.DateTimeField(read_only=True)
-
-    class Meta:
-        model = LawyerProfile
-        fields = [
-            'expertise', 'degree', 'experience_years', 'status',
-            'document', 'bio', 'city', 'specialization',
-            'created_at', 'updated_at', 'avatar'
-        ]
-
 
 # ----------------------------
 # Change Password Serializer
@@ -81,28 +52,14 @@ class LogoutSerializer(serializers.Serializer):
 
 
 # ----------------------------
-# Lawyer List Serializer
-# ----------------------------
-class LawyerListSerializer(serializers.ModelSerializer):
-    full_name = serializers.SerializerMethodField()
-
-    class Meta:
-        model = LawyerProfile
-        fields = ['id', 'full_name', 'expertise', 'degree', 'experience_years', 'status']
-
-    def get_full_name(self, obj):
-        return f"{obj.user.first_name} {obj.user.last_name}"
-
-
-# ----------------------------
 # Custom JWT Serializer
 # ----------------------------
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     @classmethod
     def get_token(cls, user):
         token = super().get_token(user)
-        token['is_client'] = hasattr(user, 'client_profile')
-        token['is_lawyer'] = hasattr(user, 'lawyer_profile')
+        token['is_client'] = hasattr(user, 'client')
+        token['is_lawyer'] = hasattr(user, 'lawyer')
         return token
 
     def validate(self, attrs):
@@ -158,7 +115,6 @@ class ResetPasswordSerializer(serializers.Serializer):
         new_password = self.validated_data["new_password"]
 
         with transaction.atomic():
-            # گرفتن آخرین OTP معتبر
             otp_obj = PasswordResetCode.objects.select_for_update().filter(
                 phone_number=phone_number,
                 code=code,
@@ -168,15 +124,14 @@ class ResetPasswordSerializer(serializers.Serializer):
             if not otp_obj.is_valid():
                 raise serializers.ValidationError("کد منقضی شده یا استفاده شده است.")
 
-            # تغییر رمز کاربر
             user.password = make_password(new_password)
             user.save(update_fields=["password"])
 
-            # علامت‌گذاری OTP به عنوان استفاده‌شده
             otp_obj.is_used = True
             otp_obj.save(update_fields=["is_used"])
 
         return user
+
 
 # ----------------------------
 # OTP Verification Serializers
@@ -203,9 +158,9 @@ class VerifyOTPSerializer(serializers.Serializer):
 
         user = User.objects.get(phone_number=phone)
         user.is_active = True
-        user.save()
+        user.save(update_fields=['is_active'])
         otp.is_used = True
-        otp.save()
+        otp.save(update_fields=['is_used'])
 
         attrs['user'] = user
         return attrs

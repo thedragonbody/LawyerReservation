@@ -81,6 +81,8 @@ INSTALLED_APPS = [
     'categories',
     'rating_and_reviews',
     'ai_assistant',
+    'client_profile',
+    'lawyer_profile',
 ]
 
 MIDDLEWARE = [

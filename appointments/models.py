@@ -1,5 +1,6 @@
 from django.db import models, transaction
-from users.models import LawyerProfile, ClientProfile
+from lawyer_profile.models import LawyerProfile
+from client_profile.models import ClientProfile
 from common.models import BaseModel
 from common.choices import AppointmentStatus
 from common.validators import validate_slot_time
@@ -31,10 +32,11 @@ class Appointment(BaseModel):
     slot = models.ForeignKey(Slot, on_delete=models.CASCADE, related_name='appointments')
     status = models.CharField(max_length=10, choices=AppointmentStatus.choices, default=AppointmentStatus.PENDING)
     description = models.TextField(blank=True)
-    # لوکیشن شامل آدرس + GPS برای نمایش روی نقشه
-    location = models.CharField(max_length=255, blank=True, null=True)  # آدرس مطب
     rescheduled_from = models.ForeignKey('self', on_delete=models.SET_NULL, blank=True, null=True)
-
+    @property
+    def location_name(self):
+        return self.lawyer.office_location or "آدرس ثبت نشده"
+    
     class Meta:
         ordering = ['slot__start_time']
 

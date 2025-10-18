@@ -1,9 +1,10 @@
 from django.db import models
 from django.conf import settings
 from common.validators import validate_case_end_date
-from users.models import LawyerProfile
+from lawyer_profile.models import LawyerProfile
 from common.models import BaseModel
 from common.choices import CaseResult
+from client_profile.models import ClientProfile
 
 
 class Case(models.Model):

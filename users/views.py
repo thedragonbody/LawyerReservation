@@ -9,10 +9,10 @@ from .models import PasswordResetCode
 from django.contrib.auth.hashers import make_password
 from django.shortcuts import get_object_or_404
 
-from .models import User, ClientProfile, LawyerProfile
+from .models import User
 from .serializers import (
-    UserSerializer, ClientProfileSerializer, LawyerProfileSerializer,
-    ChangePasswordSerializer, LogoutSerializer, LawyerListSerializer,
+    UserSerializer,
+    ChangePasswordSerializer, LogoutSerializer,
     CustomTokenObtainPairSerializer,ForgotPasswordSerializer, ResetPasswordSerializer,
     PhoneSerializer, VerifyOTPSerializer
 )
@@ -68,30 +68,6 @@ class LogoutView(generics.GenericAPIView):
 
 
 # ================================
-# Client Profile
-# ================================
-class ClientProfileView(generics.RetrieveUpdateAPIView):
-    serializer_class = ClientProfileSerializer
-    permission_classes = [IsAuthenticated]
-
-    def get_object(self):
-        profile, _ = ClientProfile.objects.get_or_create(user=self.request.user)
-        return profile
-
-
-# ================================
-# Lawyer Profile
-# ================================
-class LawyerProfileView(generics.RetrieveUpdateAPIView):
-    serializer_class = LawyerProfileSerializer
-    permission_classes = [IsAuthenticated]
-
-    def get_object(self):
-        profile, _ = LawyerProfile.objects.get_or_create(user=self.request.user)
-        return profile
-
-
-# ================================
 # Change Password
 # ================================
 class ChangePasswordView(generics.UpdateAPIView):
@@ -115,22 +91,6 @@ class ChangePasswordView(generics.UpdateAPIView):
         return Response({"detail": "Password updated successfully."}, status=status.HTTP_200_OK)
 
 
-# ================================
-# List of Lawyers (با pagination)
-# ================================
-
-class LawyerListPagination(PageNumberPagination):
-    page_size = 10
-    page_size_query_param = 'page_size'
-    max_page_size = 50
-
-class LawyerListView(generics.ListAPIView):
-    queryset = LawyerProfile.objects.filter(status=LawyerProfile.Status.APPROVED)
-    serializer_class = LawyerListSerializer
-    permission_classes = [AllowAny]
-    pagination_class = LawyerListPagination
-
-# اگر بخوای با SMS واقعی کار کنی، اینجا سرویس Kavenegar یا Ghasedak رو می‌تونی ایمپورت کنی
 
 class ForgotPasswordView(generics.GenericAPIView):
     permission_classes = [AllowAny]

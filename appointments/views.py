@@ -8,7 +8,7 @@ from rest_framework.views import APIView
 
 from common.models import LawyerClientRelation
 from .models import Slot, Appointment
-from .serializers import AppointmentSerializer
+from .serializers import AppointmentSerializer, AppointmentDetailSerializer
 from common.choices import AppointmentStatus
 from payments.models import Payment
 from payments.utils import create_payment_request, verify_payment_request
@@ -124,3 +124,8 @@ class AppointmentPaymentCallbackView(APIView):
         )
 
         return Response({"detail": "Appointment confirmed successfully."}, status=status.HTTP_200_OK)
+    
+
+class AppointmentDetailView(generics.RetrieveAPIView):
+    queryset = Appointment.objects.all()
+    serializer_class = AppointmentDetailSerializer

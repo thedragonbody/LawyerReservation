@@ -3,7 +3,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from appointments.models import Appointment, Slot
-from users.models import LawyerProfile
+from lawyer_profile.models import LawyerProfile
 from django.db.models import Count, Sum
 from django.utils.timezone import now, timedelta
 from collections import defaultdict

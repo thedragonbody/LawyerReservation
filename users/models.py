@@ -1,13 +1,14 @@
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, BaseUserManager
 from django.utils import timezone
-from django.utils import timezone
-import random
 from datetime import timedelta
+import random
 from django.utils.translation import gettext_lazy as _
+from geopy.geocoders import Nominatim
+from django.contrib.auth import get_user_model
 
 
-
+# ================= Custom User =================
 class UserManager(BaseUserManager):
     def create_user(self, phone_number, password=None, **extra_fields):
         if not phone_number:
@@ -23,11 +24,12 @@ class UserManager(BaseUserManager):
         extra_fields.setdefault('is_active', True)
         return self.create_user(phone_number, password, **extra_fields)
 
+
 class User(AbstractBaseUser, PermissionsMixin):
     phone_number = models.CharField(max_length=15, unique=True)
     first_name = models.CharField(max_length=150, blank=True)
     last_name = models.CharField(max_length=150, blank=True)
-    is_active = models.BooleanField(default=False)  # کاربر بعد از OTP فعال می‌شود
+    is_active = models.BooleanField(default=False)
     is_staff = models.BooleanField(default=False)
     date_joined = models.DateTimeField(default=timezone.now)
 
@@ -38,48 +40,16 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     def __str__(self):
         return str(self.phone_number)
-    
 
     def get_full_name(self):
         full_name = f"{self.first_name} {self.last_name}".strip()
         return full_name if full_name else self.phone_number
-    
-    
+
     def get_short_name(self):
         return self.first_name or self.phone_number
-    
-
-# ================= ClientProfile =================
-class ClientProfile(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='client')
-    national_id = models.CharField(max_length=10, unique=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    avatar = models.ImageField(upload_to='avatars/clients/', blank=True, null=True)
 
 
-
-class LawyerProfile(models.Model):
-    class Status(models.TextChoices):
-        PENDING = 'pending', _('Pending')
-        APPROVED = 'approved', _('Approved')
-        REJECTED = 'rejected', _('Rejected')
-
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='lawyer')
-    expertise = models.TextField(blank=True)
-    degree = models.CharField(max_length=255, blank=True)
-    experience_years = models.PositiveIntegerField(default=0)
-    status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
-    document = models.FileField(upload_to='lawyer_docs/', blank=True, null=True)
-    bio = models.TextField(blank=True)
-    city = models.CharField(max_length=100, blank=True)
-    specialization = models.CharField(max_length=100, blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    avatar = models.ImageField(upload_to='avatars/lawyers/', blank=True, null=True)
-
-
-
+# ================= PasswordResetCode =================
 class PasswordResetCode(models.Model):
     phone_number = models.CharField(max_length=15, db_index=True)
     code = models.CharField(max_length=6)

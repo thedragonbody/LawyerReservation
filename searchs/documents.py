@@ -1,5 +1,7 @@
 from elasticsearch_dsl import Document, Text, Keyword, Date, Float
-from users.models import User, LawyerProfile, ClientProfile
+from users.models import User
+from lawyer_profile.models import LawyerProfile
+from client_profile.models import ClientProfile
 from appointments.models import Appointment
 from payments.models import Payment
 from cases.models import Case

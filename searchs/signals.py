@@ -1,7 +1,9 @@
 from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
 
-from users.models import User, LawyerProfile, ClientProfile
+from users.models import User
+from lawyer_profile.models import LawyerProfile
+from client_profile.models import ClientProfile
 from appointments.models import Appointment
 from payments.models import Payment
 from cases.models import Case
