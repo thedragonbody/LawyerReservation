@@ -1,25 +1,15 @@
 from notifications.models import Notification
-from django.conf import settings
 from celery import shared_task
 
-# ----------------------------
-# تسک Celery برای ارسال SMS
-# ----------------------------
+# --- تسک Celery برای ارسال SMS
 @shared_task
 def send_sms_task(phone_number, message):
-    """
-    ارسال SMS (در صورت استفاده از Celery)
-    """
-    # اینجا کد واقعی ارسال SMS یا فراخوانی درگاه SMS قرار می‌گیرد
+    # اینجا کد واقعی ارسال SMS یا فراخوانی درگاه SMS میره
     print(f"Sending SMS to {phone_number}: {message}")
 
-
-# ----------------------------
-# نوتیفیکیشن سایت
-# ----------------------------
 def send_site_notification(user, title, message, type_=Notification.Type.APPOINTMENT_REMINDER):
     """
-    ایجاد نوتیفیکیشن در دیتابیس بدون circular import
+    ایجاد نوتیفیکیشن در دیتابیس
     """
     Notification.objects.create(
         user=user,
@@ -28,27 +18,22 @@ def send_site_notification(user, title, message, type_=Notification.Type.APPOINT
         type=type_,
     )
 
+def send_notification(user, title, message, type_=Notification.Type.APPOINTMENT_REMINDER):
+    """
+    Wrapper عمومی برای ارسال هر نوع نوتیفیکیشن
+    """
+    send_site_notification(user, title, message, type_)
 
-# ----------------------------
-# نوتیفیکیشن چت
-# ----------------------------
+# --- توابع مخصوص chat ---
 def send_chat_notification(user, message):
     """
-    ارسال نوتیفیکیشن هنگام دریافت پیام چت
+    ارسال نوتیفیکیشن برای پیام‌های چت
     """
-    title = "پیام جدید"
+    title = "New Chat Message"
     send_site_notification(user, title, message, type_=Notification.Type.APPOINTMENT_REMINDER)
-    # در صورت نیاز می‌توانید اینجا SMS یا Push هم اضافه کنید
 
-
-# ----------------------------
-# نوتیفیکیشن پوش
-# ----------------------------
 def send_push_notification(user, title, message):
     """
-    ارسال نوتیفیکیشن Push
+    این تابع می‌تواند بعداً برای push notification واقعی استفاده شود
     """
-    # اینجا کد اتصال به سرویس Push (مثل FCM یا OneSignal) قرار می‌گیرد
-    print(f"Push notification to {user.email}: {title} - {message}")
-    # همزمان دیتابیس هم می‌توان ذخیره کرد
     send_site_notification(user, title, message, type_=Notification.Type.APPOINTMENT_REMINDER)

@@ -72,10 +72,10 @@ INSTALLED_APPS = [
     # Local apps
     'users',
     'cases',
-    'payments',
     'notifications',
     'common',
     'appointments',
+    'payments',
     'searchs',
     'chat',
     'categories',
