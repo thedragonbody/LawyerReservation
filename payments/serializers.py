@@ -1,24 +1,16 @@
 from rest_framework import serializers
-from .models import Payment
-from appointments.models import Appointment
+from payments.models import Payment
 
 class PaymentSerializer(serializers.ModelSerializer):
-    appointment = serializers.PrimaryKeyRelatedField(
-        queryset=Appointment.objects.all()
-    )
-    user = serializers.StringRelatedField(read_only=True)
-
     class Meta:
         model = Payment
         fields = [
             "id",
-            "appointment",
             "user",
             "amount",
-            "payment_method",
             "status",
+            "payment_method",
             "transaction_id",
-            "created_at",
-            "updated_at"
+            "online_appointment",
         ]
-        read_only_fields = ["status", "transaction_id", "created_at", "updated_at"]
+        read_only_fields = ["status", "transaction_id"]

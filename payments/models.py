@@ -3,6 +3,8 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from users.models import User
 from common.models import BaseModel
+from notifications.models import Notification
+from notifications.utils import send_sms
 
 
 class Payment(BaseModel):
@@ -116,13 +118,36 @@ class Payment(BaseModel):
                 self.subscription.active = True
                 self.subscription.ends_at = timezone.now() + timezone.timedelta(days=30)
                 self.subscription.save(update_fields=["active", "ends_at"])
+        if self.appointment or self.online_appointment:
+            appointment = getattr(self, "appointment", None) or getattr(self, "online_appointment", None)
+            client_user = appointment.client.user
+            lawyer_user = appointment.lawyer.user
+            meet_link = getattr(appointment, "meet_link", None)
+            start_time = appointment.start_time.strftime("%Y-%m-%d %H:%M")
 
-    def mark_failed(self, reason=None):
-        """پرداخت ناموفق"""
-        self.status = self.Status.FAILED
-        self.save(update_fields=["status", "updated_at"])
-        if reason:
-            print(f"[Payment] Failed for {self.user.email} → {reason}")
+            # --- برای کلاینت
+            Notification.send(
+                user=client_user,
+                title="رزرو شما تأیید شد ✅",
+                message=f"رزرو شما برای {start_time} تأیید شد.\nلینک جلسه: {meet_link}",
+                type_=Notification.Type.APPOINTMENT_CONFIRMED,
+            )
+            send_sms(client_user.phone_number, f"رزرو شما در تاریخ {start_time} تأیید شد ✅")
+
+            # --- برای وکیل
+            Notification.send(
+                user=lawyer_user,
+                title="جلسه جدید رزرو شد 📅",
+                message=f"کاربر {client_user.get_full_name()} جلسه‌ای برای {start_time} رزرو کرده است.",
+                type_=Notification.Type.APPOINTMENT_REMINDER,
+            )
+            send_sms(lawyer_user.phone_number, f"جلسه جدید با {client_user.get_full_name()} در {start_time}")
+            def mark_failed(self, reason=None):
+                """پرداخت ناموفق"""
+                self.status = self.Status.FAILED
+                self.save(update_fields=["status", "updated_at"])
+                if reason:
+                    print(f"[Payment] Failed for {self.user.email} → {reason}")
 
     def mark_refunded(self):
         """بازپرداخت پرداخت تکمیل‌شده"""

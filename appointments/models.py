@@ -35,6 +35,7 @@ class OnlineAppointment(BaseModel):
     status = models.CharField(max_length=10, choices=AppointmentStatus.choices, default=AppointmentStatus.PENDING)
     google_meet_link = models.URLField(blank=True, null=True)
     description = models.TextField(blank=True)
+    is_reminder_sent = models.BooleanField(default=False)
 
     class Meta:
         ordering = ['slot__start_time']
