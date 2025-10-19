@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from .models import LawyerReview
-from appointments.models import Appointment
+from appointments.models import OnlineAppointment
 
 class LawyerReviewSerializer(serializers.ModelSerializer):
     lawyer_name = serializers.CharField(source="relation.lawyer.user.get_full_name", read_only=True)
@@ -39,7 +39,7 @@ class LawyerReviewSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("You have already reviewed this relation.")
 
         # (اختیاری) بررسی اینکه client حداقل یک appointment تایید شده با وکیل داشته باشد
-        if not Appointment.objects.filter(client=value.client, lawyer=value.lawyer, status="completed").exists():
+        if not OnlineAppointment.objects.filter(client=value.client, lawyer=value.lawyer, status="completed").exists():
             raise serializers.ValidationError("You can only review after completing an appointment with this lawyer.")
 
         return value

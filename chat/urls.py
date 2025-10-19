@@ -2,8 +2,7 @@ from django.urls import path
 from .views import SendMessageView, GetMessagesView, TypingIndicatorView
 
 urlpatterns = [
-    path('send-message/', SendMessageView.as_view(), name='send-message'),
-    path('get-messages/<int:lawyer_id>/<int:client_id>/', GetMessagesView.as_view(), name='get-messages'),
-    path('typing-indicator/', TypingIndicatorView.as_view(), name='typing-indicator'),
-
+    path("send/", SendMessageView.as_view(), name="send_message"),
+    path("room/<int:room_id>/messages/", GetMessagesView.as_view(), name="get_messages"),
+    path("room/<int:room_id>/typing/", TypingIndicatorView.as_view(), name="typing_indicator"),
 ]

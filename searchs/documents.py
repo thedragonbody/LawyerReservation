@@ -2,7 +2,7 @@ from elasticsearch_dsl import Document, Text, Keyword, Date, Float
 from users.models import User
 from lawyer_profile.models import LawyerProfile
 from client_profile.models import ClientProfile
-from appointments.models import Appointment
+from appointments.models import OnlineAppointment
 from payments.models import Payment
 from cases.models import Case
 from elasticsearch_dsl import analyzer
@@ -77,7 +77,7 @@ class AppointmentDocument(Document):
         name = 'appointments'
 
     @classmethod
-    def from_instance(cls, instance: Appointment):
+    def from_instance(cls, instance: OnlineAppointment):
         return cls(
             meta={'id': instance.id},
             lawyer_name=f"{instance.lawyer.user.first_name} {instance.lawyer.user.last_name}",

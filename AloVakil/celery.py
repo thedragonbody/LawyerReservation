@@ -14,3 +14,10 @@ app.conf.beat_schedule = {
         "schedule": 300,  # هر 5 دقیقه
     },
 }
+
+from celery import shared_task
+
+@shared_task
+def send_sms_task(phone_number, message):
+    # فقط print فعلا، بعدا سرویس واقعی
+    print(f"[SMS] To: {phone_number} | Message: {message}")

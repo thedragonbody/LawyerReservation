@@ -1,10 +1,10 @@
 from elasticsearch_dsl import Document, Text, Date, connections
-from .models import Appointment
+from .models import OnlineAppointment
 from django.conf import settings
 
 connections.create_connection(**settings.ELASTICSEARCH_DSL['default'])
 
-class AppointmentDocument(Document):
+class OnlineAppointmentDocument(Document):
     lawyer_name = Text()
     created_at = Date()
 

@@ -4,7 +4,7 @@ from django.db import transaction
 import logging
 
 from .models import Payment
-from appointments.models import Appointment
+from appointments.models import OnlineAppointment
 from notifications.models import Notification
 from chat.models import ChatRoom
 from common.models import LawyerClientRelation
@@ -19,7 +19,7 @@ def handle_payment_complete(sender, instance, created, **kwargs):
             appointment = instance.appointment
 
             # اگر قبلاً تأیید شده، از اجرای دوباره جلوگیری کن
-            if appointment.status == Appointment.Status.CONFIRMED:
+            if appointment.status == OnlineAppointment.Status.CONFIRMED:
                 logger.info(f"Signal skipped: Appointment {appointment.id} already confirmed.")
                 return
 
@@ -36,7 +36,7 @@ def handle_payment_complete(sender, instance, created, **kwargs):
                     ChatRoom.objects.get_or_create(relation=relation)
 
                 # تغییر وضعیت نوبت
-                appointment.status = Appointment.Status.CONFIRMED
+                appointment.status = OnlineAppointment.Status.CONFIRMED
                 appointment.save(update_fields=["status"])
 
                 # نوتیف برای طرفین
@@ -59,7 +59,7 @@ def handle_payment_complete(sender, instance, created, **kwargs):
             slot = appointment.slot
 
             with transaction.atomic():
-                appointment.status = Appointment.Status.CANCELLED
+                appointment.status = OnlineAppointment.Status.CANCELLED
                 appointment.save(update_fields=["status"])
                 slot.is_booked = False
                 slot.save(update_fields=["is_booked"])

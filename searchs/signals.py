@@ -4,7 +4,7 @@ from django.dispatch import receiver
 from users.models import User
 from lawyer_profile.models import LawyerProfile
 from client_profile.models import ClientProfile
-from appointments.models import Appointment
+from appointments.models import OnlineAppointment
 from payments.models import Payment
 from cases.models import Case
 
@@ -64,11 +64,11 @@ def delete_client(sender, instance, **kwargs):
 
 
 # ---------------------- Appointment ----------------------
-@receiver(post_save, sender=Appointment)
+@receiver(post_save, sender=OnlineAppointment)
 def index_appointment(sender, instance, **kwargs):
     index_instance(AppointmentDocument, instance)
 
-@receiver(post_delete, sender=Appointment)
+@receiver(post_delete, sender=OnlineAppointment)
 def delete_appointment(sender, instance, **kwargs):
     delete_instance(AppointmentDocument, instance)
 

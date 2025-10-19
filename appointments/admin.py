@@ -1,16 +1,7 @@
 from django.contrib import admin
-from .models import Slot, Appointment
-from django.utils.html import format_html
-from urllib.parse import quote
+from .models import OnlineAppointment  # بجای Appointment و Slot
 
-@admin.register(Slot)
-class SlotAdmin(admin.ModelAdmin):
-    list_display = ['id', 'lawyer', 'start_time', 'end_time', 'is_booked', 'price']
-    list_filter = ['lawyer', 'is_booked']
-
-@admin.register(Appointment)
-class AppointmentAdmin(admin.ModelAdmin):
-    list_display = ['id', 'client', 'lawyer', 'slot', 'status', 'get_office_address']
-    def get_office_address(self, obj):
-        return obj.slot.lawyer.office_address
-    get_office_address.short_description = 'Office Address'
+@admin.register(OnlineAppointment)
+class OnlineAppointmentAdmin(admin.ModelAdmin):
+    list_display = ('client', 'lawyer', 'start_time', 'status')
+    search_fields = ('client__user__email', 'lawyer__user__email')

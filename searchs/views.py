@@ -14,7 +14,7 @@ from django.db.models import Count
 from searchs.models import SearchHistory
 from searchs.utils import preprocess_query
 from users.documents import UserDocument
-from appointments.documents import AppointmentDocument
+from appointments.documents import OnlineAppointmentDocument
 from payments.documents import PaymentDocument
 from cases.documents import CaseDocument
 
@@ -155,7 +155,7 @@ class GlobalSearchView(APIView):
             "users": lambda: build_search(UserDocument, ["first_name", "last_name", "email", "full_name"]),
             #"lawyers": lambda: build_search(LawyerProfileDocument, ["full_name", "expertise", "degree"]),
             #"clients": lambda: build_search(ClientProfileDocument, ["full_name", "national_id"]),
-            "appointments": lambda: build_search(AppointmentDocument, ["lawyer_name", "status", "date"], status=status_filter, from_date=from_date, to_date=to_date),
+            "appointments": lambda: build_search(OnlineAppointmentDocument, ["lawyer_name", "status", "date"], status=status_filter, from_date=from_date, to_date=to_date),
             "payments": lambda: build_search(PaymentDocument, ["transaction_id", "status"]),
             "cases": lambda: build_search(CaseDocument, ["case_number", "title", "status"], status=status_filter, from_date=from_date, to_date=to_date),
         }
