@@ -1,14 +1,10 @@
-from django.urls import path, include
-from .views import AppointmentCreateView, AppointmentPaymentCallbackView, AppointmentDetailView
+from django.urls import path
+from .views import OnlineSlotListView, OnlineAppointmentCreateView, OnlineAppointmentListView, CancelOnlineAppointmentAPIView, RescheduleOnlineAppointmentAPIView
 
 urlpatterns = [
-    # ایجاد درخواست پرداخت و رزرو بعد از پرداخت
-    path('create/', AppointmentCreateView.as_view(), name='appointment-create'),
-
-    # Callback بعد از پرداخت موفق
-    path('payment-callback/', AppointmentPaymentCallbackView.as_view(), name='appointment-payment-callback'),
-    
-    path('dashboard/', include('appointments.dashboard.urls')),
-    path('appointments/<int:pk>/', AppointmentDetailView.as_view(), name='appointment-detail-api'),
-
+    path('slots/<int:lawyer_id>/', OnlineSlotListView.as_view(), name='online-slot-list'),
+    path('appointments/create/', OnlineAppointmentCreateView.as_view(), name='online-appointment-create'),
+    path('appointments/', OnlineAppointmentListView.as_view(), name='online-appointment-list'),
+        path('appointments/<int:pk>/cancel/', CancelOnlineAppointmentAPIView.as_view(), name='online-appointment-cancel'),
+    path('appointments/<int:pk>/reschedule/', RescheduleOnlineAppointmentAPIView.as_view(), name='online-appointment-reschedule'),
 ]

@@ -1,131 +1,238 @@
-from rest_framework import generics, status
-from rest_framework.permissions import IsAuthenticated
+from rest_framework import generics, permissions, status
 from rest_framework.response import Response
-from django.db import transaction
-from rest_framework.exceptions import ValidationError
-from notifications.models import Notification
+from django.shortcuts import get_object_or_404
+from .models import OnlineSlot, OnlineAppointment
+from .serializers import OnlineSlotSerializer, OnlineAppointmentSerializer, OnlineAppointmentCancelSerializer, OnlineAppointmentRescheduleSerializer
+from django.utils import timezone
+from rest_framework import serializers
 from rest_framework.views import APIView
+from django.db import transaction
+from django.utils import timezone
+from datetime import timedelta
+from django.core.exceptions import ValidationError
+from notifications.models import Notification
+from common.utils import send_sms
 
-from common.models import LawyerClientRelation
-from .models import Slot, Appointment
-from .serializers import AppointmentSerializer, AppointmentDetailSerializer
-from common.choices import AppointmentStatus
-from payments.models import Payment
-from payments.utils import create_payment_request, verify_payment_request
-from common.utils import send_sms, send_user_notification
 
-class AppointmentCreateView(generics.GenericAPIView):
-    serializer_class = AppointmentSerializer
-    permission_classes = [IsAuthenticated]
+# لیست اسلات‌های آنلاین برای یک وکیل
+class OnlineSlotListView(generics.ListAPIView):
+    serializer_class = OnlineSlotSerializer
+    permission_classes = [permissions.AllowAny]
 
-    def post(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
+    def get_queryset(self):
+        lawyer_id = self.kwargs['lawyer_id']
+        return OnlineSlot.objects.filter(lawyer_id=lawyer_id, is_booked=False, start_time__gte=timezone.now())
+
+# رزرو آنلاین یک اسلات
+class OnlineAppointmentCreateView(generics.CreateAPIView):
+    serializer_class = OnlineAppointmentSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def perform_create(self, serializer):
+        slot_id = self.request.data.get('slot')
+        slot = get_object_or_404(OnlineSlot, pk=slot_id)
+
+        client_profile = getattr(self.request.user, 'client_profile', None)
+        if not client_profile:
+            raise serializers.ValidationError("فقط کلاینت‌ها می‌توانند رزرو کنند.")
+
+        appointment = serializer.save(client=client_profile, lawyer=slot.lawyer, slot=slot)
+        appointment.confirm()  # تایید اتوماتیک و ساخت Google Meet + Notification
+
+# لیست رزروهای آنلاین کاربر
+class OnlineAppointmentListView(generics.ListAPIView):
+    serializer_class = OnlineAppointmentSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        client_profile = getattr(self.request.user, 'client_profile', None)
+        return OnlineAppointment.objects.filter(client=client_profile).order_by('-slot__start_time')
+    
+class CancelOnlineAppointmentAPIView(APIView):
+    """
+    POST /api/online/appointments/{pk}/cancel/
+    فقط کاربر (client) می‌تواند تا 24 ساعت قبل لغو کند.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, pk):
+        user = request.user
+        appointment = get_object_or_404(OnlineAppointment.objects.select_related("client__user", "slot"), pk=pk)
+
+        # اجازه: فقط کاربرِ مربوطه
+        if appointment.client.user != user:
+            return Response({"detail": "فقط کاربر صاحب رزرو می‌تواند آن را لغو کند."}, status=status.HTTP_403_FORBIDDEN)
+
+        # بررسی وضعیت قابل لغو بودن
+        if appointment.status in ["cancelled", "completed"]:
+            return Response({"detail": "این رزرو قابل لغو نیست."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # بررسی مهلت 24 ساعت
+        if appointment.slot.start_time - timezone.now() < timedelta(hours=24):
+            return Response({"detail": "لغو تنها تا 24 ساعت قبل امکان‌پذیر است."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # درخواست تأیید (اختیاری)
+        serializer = OnlineAppointmentCancelSerializer(data=request.data or {"confirm": True})
         serializer.is_valid(raise_exception=True)
 
-        client = request.user.client_profile
-        slot = serializer.validated_data['slot']
-
-        # Validation: end_time > start_time
-        if slot.end_time <= slot.start_time:
-            raise ValidationError({"slot": "Slot end_time must be after start_time."})
-
-        # بررسی همزمانی slot
-        with transaction.atomic():
-            slot = Slot.objects.select_for_update().get(pk=slot.id)
-            if slot.is_booked:
-                raise ValidationError({"slot": "This slot is already booked."})
-
-        appointment = serializer.save(client=client)
-        appointment.confirm()
-
-        return Response({
-            "detail": "Appointment confirmed successfully.",
-            "appointment_id": appointment.id
-        }, status=status.HTTP_200_OK)
-
-        # Notification و پیامک
-        send_user_notification(
-            user=appointment.client.user,
-            title="Appointment Confirmed",
-            message=f"Your appointment on {slot.start_time} with {slot.lawyer.user.get_full_name()} has been confirmed.",
-            link=None
-        )
-
-        send_sms(
-            appointment.client.user.phone_number,
-            f"وقت شما {slot.start_time} با {slot.lawyer.user.get_full_name()} تایید شد."
-        )
-
-        return Response({"detail": "Appointment confirmed successfully."})
-class AppointmentPaymentCallbackView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def post(self, request, *args, **kwargs):
-        transaction_id = request.data.get("transaction_id")
+        # عملیات اتمیک و جلوگیری از race conditions
         try:
-            payment = Payment.objects.get(transaction_id=transaction_id)
-        except Payment.DoesNotExist:
-            return Response({"detail": "Payment not found."}, status=status.HTTP_404_NOT_FOUND)
+            with transaction.atomic():
+                # قفل روی appointment و slot
+                appt = OnlineAppointment.objects.select_for_update().get(pk=appointment.pk)
+                slot = OnlineSlot.objects.select_for_update().get(pk=appt.slot.pk)
 
-        if payment.user != request.user:
-            return Response({"detail": "Unauthorized."}, status=status.HTTP_403_FORBIDDEN)
+                # دوباره بررسی وضعیت و زمان داخل تراکنش
+                if appt.status in ["cancelled", "completed"]:
+                    return Response({"detail": "این رزرو قبلاً لغو یا تکمیل شده است."}, status=status.HTTP_400_BAD_REQUEST)
+                if slot.start_time - timezone.now() < timedelta(hours=24):
+                    return Response({"detail": "لغو تنها تا 24 ساعت قبل امکان‌پذیر است."}, status=status.HTTP_400_BAD_REQUEST)
+
+                # آزادسازی اسلات
+                slot.is_booked = False
+                slot.save(update_fields=["is_booked"])
+
+                # تغییر وضعیت رزرو
+                appt.status = "cancelled"
+                appt.save(update_fields=["status"])
+
+            # خارج از تراکنش: ارسال نوتیف و SMS
+            try:
+                Notification.objects.create(
+                    user=user,
+                    appointment=appointment,
+                    title="رزرو لغو شد",
+                    message=f"رزروی که برای {appointment.slot.start_time} با {appointment.lawyer.user.get_full_name()} داشتید، لغو شد."
+                )
+                Notification.objects.create(
+                    user=appointment.lawyer.user,
+                    appointment=appointment,
+                    title="رزرو کاربر لغو شد",
+                    message=f"{user.get_full_name()} رزوی که داشت را برای {appointment.slot.start_time} لغو کرد."
+                )
+            except Exception:
+                pass
+
+            try:
+                send_sms(user.phone_number, f"رزرو شما برای {appointment.slot.start_time} لغو شد.")
+                send_sms(appointment.lawyer.user.phone_number, f"رزرو کاربر {user.get_full_name()} برای {appointment.slot.start_time} لغو شد.")
+            except Exception:
+                pass
+
+            return Response({"detail": "رزرو با موفقیت لغو شد."}, status=status.HTTP_200_OK)
+
+        except ValidationError as e:
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({"detail": "خطا در لغو رزرو."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class RescheduleOnlineAppointmentAPIView(APIView):
+    """
+    POST /api/online/appointments/{pk}/reschedule/
+    فقط کاربر می‌تواند تا 24 ساعت قبل درخواست تغییر زمان بدهد.
+    شرایط:
+      - اسلات جدید باید آزاد باشد
+      - کاربر نباید بیش از 1 رزرو در آن روز داشته باشد (بر اساس اسلات جدید)
+      - همه عملیات در یک تراکنش انجام می‌شود (race-safe)
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, pk):
+        user = request.user
+        appointment = get_object_or_404(OnlineAppointment.objects.select_related("client__user", "slot", "lawyer"), pk=pk)
+
+        # فقط صاحب رزرو
+        if appointment.client.user != user:
+            return Response({"detail": "فقط کاربر صاحب رزرو می‌تواند زمان را تغییر دهد."}, status=status.HTTP_403_FORBIDDEN)
+
+        if appointment.status in ["cancelled", "completed"]:
+            return Response({"detail": "این رزرو قابل تغییر نیست."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # حداکثر تا 24 ساعت قبل
+        if appointment.slot.start_time - timezone.now() < timedelta(hours=24):
+            return Response({"detail": "تغییر زمان تنها تا 24 ساعت قبل امکان‌پذیر است."}, status=status.HTTP_400_BAD_REQUEST)
+
+        serializer = OnlineAppointmentRescheduleSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        new_slot_id = serializer.validated_data["new_slot_id"]
+
+        # بررسی وجود اسلات جدید
+        new_slot = get_object_or_404(OnlineSlot, pk=new_slot_id)
+
+        # prevent reschedule to same slot
+        if new_slot.pk == appointment.slot.pk:
+            return Response({"detail": "انتخاب اسلات جدید نمی‌تواند همان اسلات فعلی باشد."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # بررسی اینکه اسلات جدید مربوط به همان وکیل باشه (در صورت نیاز)
+        if new_slot.lawyer != appointment.lawyer:
+            return Response({"detail": "اسلات جدید باید متعلق به همان وکیل باشد."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # بررسی محدودیت 1 رزرو در روز برای کاربر (بر اساس تاریخ اسلات جدید)
+        new_date = new_slot.start_time.date()
+        if OnlineAppointment.objects.filter(
+            client=appointment.client,
+            slot__start_time__date=new_date,
+            status="confirmed"
+        ).exclude(pk=appointment.pk).exists():
+            return Response({"detail": "شما قبلاً یک رزرو تأیید شده در آن روز دارید."}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            payment_response = verify_payment_request(transaction_id)
-        except Exception:
-            return Response({"detail": "Payment verification failed."}, status=status.HTTP_400_BAD_REQUEST)
+            with transaction.atomic():
+                # قفل روی appointment، old slot و new slot
+                appt = OnlineAppointment.objects.select_for_update().get(pk=appointment.pk)
+                old_slot = OnlineSlot.objects.select_for_update().get(pk=appt.slot.pk)
+                ns = OnlineSlot.objects.select_for_update().get(pk=new_slot.pk)
 
-        if payment_response.get("status") != 100:
-            payment.status = Payment.Status.FAILED
-            payment.save()
-            return Response({"detail": "Payment failed."}, status=status.HTTP_400_BAD_REQUEST)
+                # بررسی مجدد داخل تراکنش
+                if appt.status in ["cancelled", "completed"]:
+                    return Response({"detail": "این رزرو قابل تغییر نیست."}, status=status.HTTP_400_BAD_REQUEST)
+                if old_slot.start_time - timezone.now() < timedelta(hours=24):
+                    return Response({"detail": "تغییر زمان تنها تا 24 ساعت قبل امکان‌پذیر است."}, status=status.HTTP_400_BAD_REQUEST)
+                if ns.is_booked:
+                    return Response({"detail": "اسلات جدید قبلاً رزرو شده است."}, status=status.HTTP_400_BAD_REQUEST)
 
-        with transaction.atomic():
-            slot_id = int(payment_response["order_id"].split("_")[1])
-            slot = Slot.objects.select_for_update().get(pk=slot_id)
-            if slot.is_booked:
-                return Response({"detail": "Slot already booked."}, status=status.HTTP_400_BAD_REQUEST)
+                # آزادسازی اسلات قدیمی
+                old_slot.is_booked = False
+                old_slot.save(update_fields=["is_booked"])
 
-            appointment = Appointment.objects.create(
-                client=payment.user.client_profile,
-                lawyer=slot.lawyer,
-                slot=slot,
-                status=AppointmentStatus.CONFIRMED,
-                transaction_id=transaction_id
-            )
+                # رزرو اسلات جدید
+                ns.is_booked = True
+                ns.save(update_fields=["is_booked"])
 
-            slot.is_booked = True
-            slot.save()
+                # بروزرسانی appointment
+                appt.slot = ns
+                appt.status = "confirmed"
+                # اگر لازم باشه، لینک جدید Google Meet ساخته و جایگزین شود
+                # appt.google_meet_link = appt.create_google_meet_link()
+                appt.save(update_fields=["slot", "status", "google_meet_link"])
 
-            # به‌روزرسانی رابطه Lawyer ↔ Client
-            relation, _ = LawyerClientRelation.objects.get_or_create(
-                lawyer=slot.lawyer,
-                client=payment.user.client_profile,
-            )
-            relation.is_active = True
-            relation.touch()
-            relation.save()
+            # خارج از تراکنش: ارسال نوتیف و sms
+            try:
+                Notification.objects.create(
+                    user=user,
+                    appointment=appt,
+                    title="رزرو تغییر کرد",
+                    message=f"رزرو شما به زمان {ns.start_time} منتقل شد."
+                )
+                Notification.objects.create(
+                    user=appt.lawyer.user,
+                    appointment=appt,
+                    title="رزرو کاربر تغییر یافت",
+                    message=f"رزرو {user.get_full_name()} به زمان {ns.start_time} تغییر یافت."
+                )
+            except Exception:
+                pass
 
-            payment.appointment = appointment
-            payment.status = Payment.Status.COMPLETED
-            payment.provider_data = payment_response
-            payment.save()
+            try:
+                send_sms(user.phone_number, f"رزرو شما به زمان {ns.start_time} تغییر یافت.")
+                send_sms(appt.lawyer.user.phone_number, f"رزرو کاربر {user.get_full_name()} به زمان {ns.start_time} تغییر یافت.")
+            except Exception:
+                pass
 
-        send_user_notification(
-            user=appointment.client.user,
-            title="Appointment Confirmed",
-            message=f"Your appointment on {slot.start_time} with {slot.lawyer.user.get_full_name()} has been confirmed.",
-            link=None
-        )
+            return Response({"detail": "رزرو با موفقیت تغییر یافت.", "appointment_id": appt.pk}, status=status.HTTP_200_OK)
 
-        send_sms(
-            appointment.client.user.phone_number,
-            f"پرداخت موفق! وقت شما {slot.start_time} با {slot.lawyer.user.get_full_name()} تایید شد."
-        )
-
-        return Response({"detail": "Appointment confirmed successfully."}, status=status.HTTP_200_OK)
-    
-
-class AppointmentDetailView(generics.RetrieveAPIView):
-    queryset = Appointment.objects.all()
-    serializer_class = AppointmentDetailSerializer
+        except ValidationError as e:
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({"detail": "خطا در تغییر زمان رزرو."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
