@@ -1,8 +1,10 @@
 import logging
 import traceback
 import json
-
+from django.utils import timezone
+from django.conf import settings
 from django.utils.deprecation import MiddlewareMixin
+from django.shortcuts import redirect
 
 logger = logging.getLogger("common")
 
@@ -63,3 +65,24 @@ class GlobalRequestLoggingMiddleware(MiddlewareMixin):
         except Exception:
             return "<unreadable body>"
         return {}
+    
+class SessionIdleTimeout:
+    """
+    If user is authenticated and idle for > MAX_IDLE_SECONDS, log them out.
+    Add into MIDDLEWARE.
+    """
+    def __init__(self, get_response):
+        self.get_response = get_response
+        self.timeout = getattr(settings, 'SESSION_IDLE_TIMEOUT', 60*60*24)  # default 24h
+
+    def __call__(self, request):
+        if request.user.is_authenticated:
+            now = timezone.now().timestamp()
+            last = request.session.get('last_activity', now)
+            if now - last > self.timeout:
+                from django.contrib.auth import logout
+                logout(request)
+                # optional redirect to login
+            request.session['last_activity'] = now
+        response = self.get_response(request)
+        return response

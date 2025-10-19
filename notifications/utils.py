@@ -1,5 +1,6 @@
 from notifications.models import Notification
 from celery import shared_task
+from .tasks import send_sms_task
 
 # --- تسک Celery برای ارسال SMS
 @shared_task
@@ -37,3 +38,19 @@ def send_push_notification(user, title, message):
     این تابع می‌تواند بعداً برای push notification واقعی استفاده شود
     """
     send_site_notification(user, title, message, type_=Notification.Type.APPOINTMENT_REMINDER)
+
+
+def send_sms_task_or_sync(phone_number, message):
+    """
+    Try enqueue; if celery not available, fallback to sync.
+    """
+    try:
+        # if celery configured, this returns AsyncResult
+        return send_sms_task.delay(phone_number, message)
+    except Exception:
+        # fallback: direct send (stub)
+        return really_send_sms(phone_number, message)
+
+def really_send_sms(phone_number, message):
+    # TODO: integrate with real provider (IDPay / external SMS provider)
+    print(f"[SMS] to {phone_number}: {message}")

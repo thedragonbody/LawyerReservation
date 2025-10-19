@@ -3,6 +3,8 @@ from django.dispatch import receiver
 from django.db import transaction
 from .models import User
 from .documents import UserDocument
+from django.contrib.auth.signals import user_logged_in
+from client_profile.models import ClientProfile, Device
 
 # ===================== User =====================
 @receiver(post_save, sender=User)
@@ -32,3 +34,21 @@ def delete_user_document(sender, instance, **kwargs):
     except Exception:
         pass
 
+@receiver(user_logged_in)
+def on_user_logged_in(sender, user, request, **kwargs):
+    cp = getattr(user, 'client_profile', None)
+    if not cp:
+        return
+    ip = request.META.get('REMOTE_ADDR')
+    ua = request.META.get('HTTP_USER_AGENT', '')[:500]
+    name = ua.split(')')[-1].strip() if ua else ''
+    Device.objects.update_or_create(
+        client=cp,
+        ip_address=ip,
+        user_agent=ua,
+        defaults={'name': name, 'revoked': False}
+    )
+    # update last login fields
+    cp.last_login_ip = ip
+    cp.last_login_user_agent = ua
+    cp.save(update_fields=['last_login_ip','last_login_user_agent'])

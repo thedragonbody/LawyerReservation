@@ -593,3 +593,7 @@
 [2025-10-18 20:18:35,583] [INFO] [common] {"type": "request_end", "user": "Anonymous", "method": "GET", "path": "/favicon.ico", "status_code": 404}
 [2025-10-18 20:18:40,928] [INFO] [common] {"type": "request_start", "user": "Anonymous", "method": "GET", "path": "/admin/", "query_params": {}, "body": {}}
 [2025-10-18 20:18:41,005] [INFO] [common] {"type": "request_end", "user": "Anonymous", "method": "GET", "path": "/admin/", "status_code": 200}
+[2025-10-19 22:25:32,024] [INFO] [common] {"type": "request_start", "user": "Anonymous", "method": "GET", "path": "/", "query_params": {}, "body": {}}
+[2025-10-19 22:25:32,037] [INFO] [common] {"type": "request_end", "user": "Anonymous", "method": "GET", "path": "/", "status_code": 404}
+[2025-10-19 22:25:32,171] [INFO] [common] {"type": "request_start", "user": "Anonymous", "method": "GET", "path": "/favicon.ico", "query_params": {}, "body": {}}
+[2025-10-19 22:25:32,175] [INFO] [common] {"type": "request_end", "user": "Anonymous", "method": "GET", "path": "/favicon.ico", "status_code": 404}
