@@ -1,162 +1,102 @@
-from rest_framework import generics, status
+from rest_framework import generics, permissions, status
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated, AllowAny
-from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
-from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import get_user_model
-from rest_framework.pagination import PageNumberPagination
-from .models import PasswordResetCode
-from django.contrib.auth.hashers import make_password
-from django.shortcuts import get_object_or_404
-
-from .models import User
+from rest_framework_simplejwt.views import TokenObtainPairView
 from .serializers import (
-    UserSerializer,
-    ChangePasswordSerializer, LogoutSerializer,
-    CustomTokenObtainPairSerializer,ForgotPasswordSerializer, ResetPasswordSerializer,
-    PhoneSerializer, VerifyOTPSerializer
+    UserSerializer, CustomTokenObtainPairSerializer,
+    VerifyOTPSerializer, ForgotPasswordSerializer, ResetPasswordSerializer
 )
+from .models import PasswordResetCode
+from .utils import register_device_for_user
 
-# ================================
-# Sign Up (ثبت نام با OTP)
-# ================================
 User = get_user_model()
 
 
 class RegisterView(generics.CreateAPIView):
+    """ثبت‌نام با شماره موبایل و ارسال OTP"""
     serializer_class = UserSerializer
-    permission_classes = [AllowAny]
+    permission_classes = [permissions.AllowAny]
 
-    def perform_create(self, serializer):
-        user = serializer.save()  # کاربر غیرفعال ایجاد می‌شود
-        code = PasswordResetCode.generate_code(user.phone_number)
+    def create(self, request, *args, **kwargs):
+        phone = request.data.get('phone_number')
+        if not phone:
+            return Response({"detail": "شماره موبایل الزامی است."}, status=400)
 
-        # TODO: ارسال OTP از طریق سرویس پیامک (در حال حاضر print)
-        print(f"📱 کد تأیید ثبت‌نام برای {user.phone_number}: {code}")
+        user, created = User.objects.get_or_create(phone_number=phone)
+        if not user.is_active:
+            user.is_active = False
+            user.save(update_fields=['is_active'])
 
-        return Response({
-            "detail": "کد تأیید به شماره شما ارسال شد. لطفاً برای فعال‌سازی حساب، OTP را وارد کنید."
-        }, status=201)
+        PasswordResetCode.generate_code(phone, 'signup')
+        return Response({"detail": "کد تأیید ارسال شد."}, status=201)
 
-# ================================
-# Login (JWT)
-# ================================
+
+class VerifyOTPView(generics.GenericAPIView):
+    """تأیید OTP و فعال‌سازی کاربر"""
+    serializer_class = VerifyOTPSerializer
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        phone = serializer.validated_data['phone_number']
+        user = User.objects.filter(phone_number=phone).first()
+        if not user:
+            return Response({"detail": "کاربر یافت نشد."}, status=404)
+
+        user.is_active = True
+        user.save(update_fields=['is_active'])
+
+        # ایجاد ClientProfile در صورت عدم وجود
+        from client_profile.models import ClientProfile
+        ClientProfile.objects.get_or_create(user=user)
+
+        # ثبت دستگاه
+        register_device_for_user(user, request)
+
+        # ایجاد توکن
+        token_serializer = CustomTokenObtainPairSerializer(data={
+            'phone_number': phone,
+            'password': None
+        })
+        token = CustomTokenObtainPairSerializer.get_token(user)
+        data = {
+            'access': str(token.access_token),
+            'refresh': str(token),
+        }
+        return Response({'detail': 'تأیید شد', 'tokens': data}, status=200)
+
+
 class LoginView(TokenObtainPairView):
+    """ورود با شماره و رمز عبور"""
     serializer_class = CustomTokenObtainPairSerializer
-    permission_classes = [AllowAny]
+
+    def post(self, request, *args, **kwargs):
+        response = super().post(request, *args, **kwargs)
+        if response.status_code == 200:
+            user = User.objects.filter(phone_number=request.data.get('phone_number')).first()
+            if user:
+                register_device_for_user(user, request)
+        return response
 
 
-# ================================
-# Refresh Token (در صورت نیاز)
-# ================================
-class RefreshTokenView(TokenRefreshView):
-    permission_classes = [AllowAny]
+class ForgotPasswordView(generics.GenericAPIView):
+    serializer_class = ForgotPasswordSerializer
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        return Response({"detail": "در صورت وجود حساب، کد ارسال شد."}, status=200)
 
 
-# ================================
-# Logout (JWT blacklist)
-# ================================
-class LogoutView(generics.GenericAPIView):
-    serializer_class = LogoutSerializer
-    permission_classes = [IsAuthenticated]
+class ResetPasswordView(generics.GenericAPIView):
+    serializer_class = ResetPasswordSerializer
+    permission_classes = [permissions.AllowAny]
 
     def post(self, request):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         serializer.save()
-        return Response({"detail": "Logout successful."}, status=status.HTTP_204_NO_CONTENT)
-
-
-# ================================
-# Change Password
-# ================================
-class ChangePasswordView(generics.UpdateAPIView):
-    serializer_class = ChangePasswordSerializer
-    model = User
-    permission_classes = [IsAuthenticated]
-
-    def get_object(self):
-        return self.request.user
-
-    def update(self, request, *args, **kwargs):
-        user = self.get_object()
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-
-        if not user.check_password(serializer.validated_data['old_password']):
-            return Response({"old_password": ["Wrong password."]}, status=status.HTTP_400_BAD_REQUEST)
-
-        user.set_password(serializer.validated_data['new_password'])
-        user.save()
-        return Response({"detail": "Password updated successfully."}, status=status.HTTP_200_OK)
-
-
-
-class ForgotPasswordView(generics.GenericAPIView):
-    permission_classes = [AllowAny]
-    serializer_class = PhoneSerializer
-
-    def post(self, request):
-        phone = request.data.get('phone_number')
-        user = get_object_or_404(User, phone_number=phone)
-
-        # تولید OTP و ذخیره خودکار در دیتابیس
-        code = PasswordResetCode.generate_code(phone)
-
-        # TODO: ارسال کد از طریق سرویس پیامک
-        print(f"📱 کد تأیید برای {phone}: {code}")
-
-        return Response({"detail": "کد تأیید برای بازیابی رمز ارسال شد."})
-
-class ResetPasswordView(generics.GenericAPIView):
-    serializer_class = ResetPasswordSerializer
-
-    def post(self, request):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-
-        phone_number = serializer.validated_data['phone_number']
-        code = serializer.validated_data['code']
-        new_password = serializer.validated_data['new_password']
-
-        try:
-            otp_obj = PasswordResetCode.objects.filter(phone_number=phone_number, code=code, is_used=False).latest('created_at')
-        except PasswordResetCode.DoesNotExist:
-            return Response({"detail": "Invalid or expired code."}, status=400)
-
-        if not otp_obj.is_valid():
-            return Response({"detail": "OTP expired or already used."}, status=400)
-
-        user = User.objects.get(phone_number=phone_number)
-        user.password = make_password(new_password)
-        user.save()
-
-        otp_obj.is_used = True
-        otp_obj.save()
-
-        return Response({"detail": "Password reset successfully."}, status=200)
-    
-class VerifyOTPView(generics.GenericAPIView):
-    serializer_class = VerifyOTPSerializer
-
-    def post(self, request):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        user = serializer.validated_data['user']
-
-        # ایجاد توکن JWT برای ورود همزمان
-        refresh = RefreshToken.for_user(user)
-
-        return Response({
-            "detail": "حساب فعال شد و ورود انجام شد.",
-            "user": {
-                "id": user.id,
-                "phone_number": user.phone_number,
-                "first_name": user.first_name,
-                "last_name": user.last_name,
-            },
-            "token": {
-                "refresh": str(refresh),
-                "access": str(refresh.access_token)
-            }
-        }, status=200)
+        return Response({"detail": "رمز عبور با موفقیت تغییر یافت."}, status=200)

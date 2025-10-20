@@ -1,4 +1,4 @@
-from django.db import models
+from django.db import models, transaction
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, BaseUserManager
 from django.utils import timezone
 from datetime import timedelta
@@ -6,6 +6,7 @@ import random
 from django.utils.translation import gettext_lazy as _
 from geopy.geocoders import Nominatim
 from django.contrib.auth import get_user_model
+from django.conf import settings
 
 
 # ================= Custom User =================
@@ -51,17 +52,53 @@ class User(AbstractBaseUser, PermissionsMixin):
 
 # ================= PasswordResetCode =================
 class PasswordResetCode(models.Model):
+    PURPOSE_CHOICES = [
+        ('signup', 'Signup'),
+        ('reset', 'Password Reset'),
+        ('phone_verify', 'Phone Verification'),
+    ]
+
     phone_number = models.CharField(max_length=15, db_index=True)
     code = models.CharField(max_length=6)
+    purpose = models.CharField(max_length=20, choices=PURPOSE_CHOICES)
     created_at = models.DateTimeField(auto_now_add=True)
     is_used = models.BooleanField(default=False)
+    attempts = models.IntegerField(default=0)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['phone_number', 'purpose']),
+        ]
+        ordering = ['-created_at']
 
     @classmethod
-    def generate_code(cls, phone_number):
-        cls.objects.filter(phone_number=phone_number, is_used=False).delete()
-        code = str(random.randint(100000, 999999))
-        cls.objects.create(phone_number=phone_number, code=code)
+    def generate_code(cls, phone_number, purpose):
+        code = f"{random.randint(100000, 999999)}"
+        cls.objects.create(phone_number=phone_number, code=code, purpose=purpose)
+        # اینجا می‌تونی تابع ارسال SMS قرار بدی
+        print(f"[OTP] Sent {code} for {purpose} to {phone_number}")
         return code
 
-    def is_valid(self):
-        return (timezone.now() - self.created_at) <= timedelta(minutes=5) and not self.is_used
+    @classmethod
+    def verify_code(cls, phone_number, code, purpose, max_attempts=5, ttl_minutes=5):
+        """بررسی OTP با محدودیت زمانی و تلاش"""
+        try:
+            with transaction.atomic():
+                otp = cls.objects.select_for_update().filter(
+                    phone_number=phone_number,
+                    purpose=purpose,
+                    is_used=False
+                ).latest('created_at')
+                otp.attempts += 1
+                otp.save(update_fields=['attempts'])
+                if otp.attempts > max_attempts:
+                    raise ValueError("کد بیش از حد تلاش شده است. لطفاً دوباره درخواست دهید.")
+                if (timezone.now() - otp.created_at) > timedelta(minutes=ttl_minutes):
+                    raise ValueError("کد منقضی شده است.")
+                if otp.code != code:
+                    raise ValueError("کد نادرست است.")
+                otp.is_used = True
+                otp.save(update_fields=['is_used'])
+                return True
+        except cls.DoesNotExist:
+            raise ValueError("کد معتبر یافت نشد.")
