@@ -633,3 +633,13 @@
 [2025-10-20 23:12:30,739] [INFO] [common] {"type": "request_end", "user": "Anonymous", "method": "GET", "path": "/users/reset-password/", "status_code": 405}
 [2025-10-20 23:12:38,687] [INFO] [common] {"type": "request_start", "user": "Anonymous", "method": "POST", "path": "/users/reset-password/", "query_params": {}, "body": "<unreadable body>"}
 [2025-10-20 23:12:38,692] [INFO] [common] {"type": "request_end", "user": "Anonymous", "method": "POST", "path": "/users/reset-password/", "status_code": 400}
+[2025-10-21 14:50:41,931] [INFO] [common] {"type": "request_start", "user": "Anonymous", "method": "GET", "path": "/", "query_params": {}, "body": {}}
+[2025-10-21 14:50:41,945] [INFO] [common] {"type": "request_end", "user": "Anonymous", "method": "GET", "path": "/", "status_code": 404}
+[2025-10-21 14:50:42,067] [INFO] [common] {"type": "request_start", "user": "Anonymous", "method": "GET", "path": "/favicon.ico", "query_params": {}, "body": {}}
+[2025-10-21 14:50:42,070] [INFO] [common] {"type": "request_end", "user": "Anonymous", "method": "GET", "path": "/favicon.ico", "status_code": 404}
+[2025-10-21 14:51:48,056] [INFO] [common] {"type": "request_start", "user": "Anonymous", "method": "GET", "path": "/admin/", "query_params": {}, "body": {}}
+[2025-10-21 14:51:48,131] [INFO] [common] {"type": "request_end", "user": "Anonymous", "method": "GET", "path": "/admin/", "status_code": 200}
+[2025-10-21 14:51:54,767] [INFO] [common] {"type": "request_start", "user": "Anonymous", "method": "GET", "path": "/users/login/", "query_params": {}, "body": {}}
+[2025-10-21 14:51:54,873] [INFO] [common] {"type": "request_end", "user": "Anonymous", "method": "GET", "path": "/users/login/", "status_code": 405}
+[2025-10-21 14:51:58,797] [INFO] [common] {"type": "request_start", "user": "Anonymous", "method": "GET", "path": "/users/", "query_params": {}, "body": {}}
+[2025-10-21 14:51:58,799] [INFO] [common] {"type": "request_end", "user": "Anonymous", "method": "GET", "path": "/users/", "status_code": 404}

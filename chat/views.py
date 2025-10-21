@@ -2,30 +2,33 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django.shortcuts import get_object_or_404
+from rest_framework import status
 
 from users.models import User
 from chat.models import Message, ChatRoom
-from notifications.utils import send_chat_notification, send_push_notification
+from chat.tasks import send_chat_notifications_task # 💡 NEW: Import Celery task
 
 class SendMessageView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, *args, **kwargs):
-        """
-        ارسال پیام به کاربر دیگر
-        """
-        recipient_id = request.data.get("recipient_id")
+        room_id = request.data.get("room_id")
         text = request.data.get("text")
+        
+        if not room_id or not text:
+            return Response({"error": "room_id و text الزامی است"}, status=status.HTTP_400_BAD_REQUEST)
 
-        if not recipient_id or not text:
-            return Response({"error": "recipient_id و text الزامی است"}, status=400)
-
-        recipient = get_object_or_404(User, id=recipient_id)
-
-        # پیدا کردن یا ایجاد ChatRoom
-        room, created = ChatRoom.objects.get_or_create_between_users(
-            request.user, recipient
-        )
+        room = get_object_or_404(ChatRoom, id=room_id)
+        
+        user_ids = [room.relation.lawyer.user_id, room.relation.client.user_id]
+        if request.user.id not in user_ids:
+             return Response({"error": "شما عضوی از این اتاق چت نیستید"}, status=status.HTTP_403_FORBIDDEN)
+        
+        # تعیین گیرنده
+        if request.user.id == room.relation.lawyer.user_id:
+            recipient = room.relation.client.user
+        else:
+            recipient = room.relation.lawyer.user
 
         message = Message.objects.create(
             room=room,
@@ -33,23 +36,20 @@ class SendMessageView(APIView):
             content=text
         )
 
-        # ارسال نوتیفیکیشن
-        send_chat_notification(recipient, f"پیام جدید از {request.user.email}: {text}")
-        send_push_notification(recipient, "پیام جدید", text)
+        # 🚀 NEW: ارسال نوتیفیکیشن به صورت غیرهمزمان
+        send_chat_notifications_task.delay(request.user.id, recipient.id, text)
 
-        return Response({"success": True, "message_id": message.id})
+        return Response({"success": True, "message_id": message.id}, status=status.HTTP_201_CREATED)
 
 
 class GetMessagesView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, room_id, *args, **kwargs):
-        """
-        دریافت پیام‌ها برای یک ChatRoom
-        """
         room = get_object_or_404(ChatRoom, id=room_id)
-        if request.user not in room.users.all():
-            return Response({"error": "دسترسی غیرمجاز"}, status=403)
+        user_ids = [room.relation.lawyer.user_id, room.relation.client.user_id]
+        if request.user.id not in user_ids:
+             return Response({"error": "دسترسی غیرمجاز"}, status=status.HTTP_403_FORBIDDEN)
 
         messages = room.messages.order_by("created_at")
         data = [
@@ -68,12 +68,10 @@ class TypingIndicatorView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, room_id, *args, **kwargs):
-        """
-        نشانگر تایپ کردن
-        """
         room = get_object_or_404(ChatRoom, id=room_id)
-        if request.user not in room.users.all():
-            return Response({"error": "دسترسی غیرمجاز"}, status=403)
+        user_ids = [room.relation.lawyer.user_id, room.relation.client.user_id]
+        if request.user.id not in user_ids:
+             return Response({"error": "دسترسی غیرمجاز"}, status=status.HTTP_403_FORBIDDEN)
 
-        # می‌توانید اینجا WebSocket یا Celery برای اطلاع‌رسانی زمان واقعی استفاده کنید
+        # 💡 NOTE: این ویو صرفاً Placeholder است و برای عملکرد Real-time به Channel Layer نیاز دارد.
         return Response({"success": True, "status": "typing"})

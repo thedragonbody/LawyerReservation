@@ -1,93 +1,59 @@
 from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
+from django.apps import apps
+import logging
 
-from users.models import User
-from lawyer_profile.models import LawyerProfile
-from client_profile.models import ClientProfile
-from appointments.models import OnlineAppointment
-from payments.models import Payment
-from cases.models import Case
+# 💡 NEW: Import Celery tasks
+from searchs.tasks import index_instance_task, delete_instance_task
 
-from searchs.documents import (
-    UserDocument,
-    LawyerProfileDocument,
-    ClientProfileDocument,
-    AppointmentDocument,
-    PaymentDocument,
-    CaseDocument
-)
+logger = logging.getLogger("searchs")
 
-# ---------------------- Helper function ----------------------
-def index_instance(doc_class, instance):
-    try:
-        doc = doc_class.from_instance(instance)
-        doc.save()
-    except Exception as e:
-        print(f"[Warning] Failed to update Elasticsearch for {doc_class.__name__} {instance.id}: {e}")
-
-def delete_instance(doc_class, instance):
-    try:
-        doc = doc_class(meta={'id': instance.id})
-        doc.delete()
-    except Exception as e:
-        print(f"[Warning] Failed to delete Elasticsearch for {doc_class.__name__} {instance.id}: {e}")
+# ---------------------- Document Mapping Helper ----------------------
+# استفاده از این دیکشنری برای ارسال نام کلاس به Celery Task
+DOCUMENT_MAP = {
+    'User': 'UserDocument',
+    'LawyerProfile': 'LawyerProfileDocument',
+    'ClientProfile': 'ClientProfileDocument',
+    'OnlineAppointment': 'AppointmentDocument',
+    'Payment': 'PaymentDocument',
+    'Case': 'CaseDocument',
+}
 
 
-# ---------------------- User ----------------------
-@receiver(post_save, sender=User)
-def index_user(sender, instance, **kwargs):
-    index_instance(UserDocument, instance)
+# ---------------------- Post Save Signal ----------------------
+def handle_post_save(sender, instance, **kwargs):
+    model_name = sender.__name__
+    doc_class_name = DOCUMENT_MAP.get(model_name)
+    
+    if doc_class_name:
+        # 🚀 NEW: اجرای وظیفه نمایه سازی در Celery در پس‌زمینه
+        # این فراخوانی غیرهمزمان است و بلافاصله برمی‌گردد.
+        index_instance_task.delay(sender._meta.app_label, model_name, instance.id)
+    else:
+        logger.warning(f"No document map found for model: {model_name}")
 
-@receiver(post_delete, sender=User)
-def delete_user(sender, instance, **kwargs):
-    delete_instance(UserDocument, instance)
+# ---------------------- Post Delete Signal ----------------------
+def handle_post_delete(sender, instance, **kwargs):
+    model_name = sender.__name__
+    doc_class_name = DOCUMENT_MAP.get(model_name)
+    
+    if doc_class_name:
+        # 🚀 NEW: اجرای وظیفه حذف در Celery در پس‌زمینه
+        delete_instance_task.delay(doc_class_name, instance.id)
+    else:
+        logger.warning(f"No document map found for model: {model_name}")
 
+# ---------------------- Register Receivers ----------------------
 
-# ---------------------- LawyerProfile ----------------------
-@receiver(post_save, sender=LawyerProfile)
-def index_lawyer(sender, instance, **kwargs):
-    index_instance(LawyerProfileDocument, instance)
+MODELS_TO_INDEX = [
+    apps.get_model('users', 'User'),
+    apps.get_model('lawyer_profile', 'LawyerProfile'),
+    apps.get_model('client_profile', 'ClientProfile'),
+    apps.get_model('appointments', 'OnlineAppointment'),
+    apps.get_model('payments', 'Payment'),
+    apps.get_model('cases', 'Case'),
+]
 
-@receiver(post_delete, sender=LawyerProfile)
-def delete_lawyer(sender, instance, **kwargs):
-    delete_instance(LawyerProfileDocument, instance)
-
-
-# ---------------------- ClientProfile ----------------------
-@receiver(post_save, sender=ClientProfile)
-def index_client(sender, instance, **kwargs):
-    index_instance(ClientProfileDocument, instance)
-
-@receiver(post_delete, sender=ClientProfile)
-def delete_client(sender, instance, **kwargs):
-    delete_instance(ClientProfileDocument, instance)
-
-
-# ---------------------- Appointment ----------------------
-@receiver(post_save, sender=OnlineAppointment)
-def index_appointment(sender, instance, **kwargs):
-    index_instance(AppointmentDocument, instance)
-
-@receiver(post_delete, sender=OnlineAppointment)
-def delete_appointment(sender, instance, **kwargs):
-    delete_instance(AppointmentDocument, instance)
-
-
-# ---------------------- Payment ----------------------
-@receiver(post_save, sender=Payment)
-def index_payment(sender, instance, **kwargs):
-    index_instance(PaymentDocument, instance)
-
-@receiver(post_delete, sender=Payment)
-def delete_payment(sender, instance, **kwargs):
-    delete_instance(PaymentDocument, instance)
-
-
-# ---------------------- Case ----------------------
-@receiver(post_save, sender=Case)
-def index_case(sender, instance, **kwargs):
-    index_instance(CaseDocument, instance)
-
-@receiver(post_delete, sender=Case)
-def delete_case(sender, instance, **kwargs):
-    delete_instance(CaseDocument, instance)
+for Model in MODELS_TO_INDEX:
+    post_save.connect(handle_post_save, sender=Model)
+    post_delete.connect(handle_post_delete, sender=Model)
