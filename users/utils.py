@@ -1,16 +1,16 @@
+from .tasks import register_device_task 
+# 💡 حذف ایمپورت‌های client_profile برای جلوگیری از Circular Import
+
 def register_device_for_user(user, request):
-    """ثبت یا بروزرسانی دستگاه هنگام ورود"""
-    from client_profile.models import ClientProfile, Device
-    cp, _ = ClientProfile.objects.get_or_create(user=user)
+    """
+    وظیفه Celery را برای ثبت یا بروزرسانی دستگاه هنگام ورود فراخوانی می‌کند.
+    """
     ip = request.META.get('REMOTE_ADDR')
-    ua = request.META.get('HTTP_USER_AGENT', '')[:500]
-    name = ua.split(')')[-1].strip() if ua else ''
-    Device.objects.update_or_create(
-        client=cp,
+    ua = request.META.get('HTTP_USER_AGENT', '') 
+    
+    # فراخوانی Celery Task به صورت غیرهمزمان
+    register_device_task.delay(
+        user_id=user.id,
         ip_address=ip,
-        user_agent=ua,
-        defaults={'name': name, 'revoked': False}
+        user_agent=ua
     )
-    cp.last_login_ip = ip
-    cp.last_login_user_agent = ua
-    cp.save(update_fields=['last_login_ip', 'last_login_user_agent'])

@@ -1579,3 +1579,119 @@ LINE 1: SELECT "users_lawyerprofile"."id", "users_lawyerprofile"."us...
                                            ^
 
 [2025-10-17 20:02:56,433] [ERROR] [django.server] "GET /users/lawyer-profile/ HTTP/1.1" 500 185556
+[2025-10-21 16:03:33,239] [ERROR] [common] {"type": "exception", "user": "Anonymous", "method": "POST", "path": "/users/register/", "query_params": {}, "body": "<unreadable body>", "exception": "'str' object has no attribute 'id'", "traceback": "Traceback (most recent call last):\n  File \"E:\\Python\\Lib\\site-packages\\django\\core\\handlers\\base.py\", line 197, in _get_response\n    response = wrapped_callback(request, *callback_args, **callback_kwargs)\n  File \"E:\\Python\\Lib\\site-packages\\django\\views\\decorators\\csrf.py\", line 65, in _view_wrapper\n    return view_func(request, *args, **kwargs)\n  File \"E:\\Python\\Lib\\site-packages\\django\\views\\generic\\base.py\", line 105, in view\n    return self.dispatch(request, *args, **kwargs)\n           ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\views.py\", line 515, in dispatch\n    response = self.handle_exception(exc)\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\views.py\", line 475, in handle_exception\n    self.raise_uncaught_exception(exc)\n    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\views.py\", line 486, in raise_uncaught_exception\n    raise exc\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\views.py\", line 512, in dispatch\n    response = handler(request, *args, **kwargs)\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\generics.py\", line 194, in post\n    return self.create(request, *args, **kwargs)\n           ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"E:\\2VAKIL\\AloVakil\\users\\views.py\", line 38, in create\n    temp_id = reset_code_instance.id\n              ^^^^^^^^^^^^^^^^^^^^^^\nAttributeError: 'str' object has no attribute 'id'\n"}
+[2025-10-21 16:03:33,278] [ERROR] [django.request] Internal Server Error: /users/register/
+Traceback (most recent call last):
+  File "E:\Python\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "E:\Python\Lib\site-packages\django\core\handlers\base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "E:\Python\Lib\site-packages\django\views\decorators\csrf.py", line 65, in _view_wrapper
+    return view_func(request, *args, **kwargs)
+  File "E:\Python\Lib\site-packages\django\views\generic\base.py", line 105, in view
+    return self.dispatch(request, *args, **kwargs)
+           ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\Python\Lib\site-packages\rest_framework\views.py", line 515, in dispatch
+    response = self.handle_exception(exc)
+  File "E:\Python\Lib\site-packages\rest_framework\views.py", line 475, in handle_exception
+    self.raise_uncaught_exception(exc)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^
+  File "E:\Python\Lib\site-packages\rest_framework\views.py", line 486, in raise_uncaught_exception
+    raise exc
+  File "E:\Python\Lib\site-packages\rest_framework\views.py", line 512, in dispatch
+    response = handler(request, *args, **kwargs)
+  File "E:\Python\Lib\site-packages\rest_framework\generics.py", line 194, in post
+    return self.create(request, *args, **kwargs)
+           ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\2VAKIL\AloVakil\users\views.py", line 38, in create
+    temp_id = reset_code_instance.id
+              ^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'str' object has no attribute 'id'
+[2025-10-21 16:03:33,281] [ERROR] [django.server] "POST /users/register/ HTTP/1.1" 500 112932
+[2025-10-21 16:03:47,198] [ERROR] [common] {"type": "exception", "user": "Anonymous", "method": "POST", "path": "/users/register/", "query_params": {}, "body": "<unreadable body>", "exception": "'str' object has no attribute 'id'", "traceback": "Traceback (most recent call last):\n  File \"E:\\Python\\Lib\\site-packages\\django\\core\\handlers\\base.py\", line 197, in _get_response\n    response = wrapped_callback(request, *callback_args, **callback_kwargs)\n  File \"E:\\Python\\Lib\\site-packages\\django\\views\\decorators\\csrf.py\", line 65, in _view_wrapper\n    return view_func(request, *args, **kwargs)\n  File \"E:\\Python\\Lib\\site-packages\\django\\views\\generic\\base.py\", line 105, in view\n    return self.dispatch(request, *args, **kwargs)\n           ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\views.py\", line 515, in dispatch\n    response = self.handle_exception(exc)\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\views.py\", line 475, in handle_exception\n    self.raise_uncaught_exception(exc)\n    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\views.py\", line 486, in raise_uncaught_exception\n    raise exc\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\views.py\", line 512, in dispatch\n    response = handler(request, *args, **kwargs)\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\generics.py\", line 194, in post\n    return self.create(request, *args, **kwargs)\n           ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"E:\\2VAKIL\\AloVakil\\users\\views.py\", line 38, in create\n    temp_id = reset_code_instance.id\n              ^^^^^^^^^^^^^^^^^^^^^^\nAttributeError: 'str' object has no attribute 'id'\n"}
+[2025-10-21 16:03:47,213] [ERROR] [django.request] Internal Server Error: /users/register/
+Traceback (most recent call last):
+  File "E:\Python\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "E:\Python\Lib\site-packages\django\core\handlers\base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "E:\Python\Lib\site-packages\django\views\decorators\csrf.py", line 65, in _view_wrapper
+    return view_func(request, *args, **kwargs)
+  File "E:\Python\Lib\site-packages\django\views\generic\base.py", line 105, in view
+    return self.dispatch(request, *args, **kwargs)
+           ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\Python\Lib\site-packages\rest_framework\views.py", line 515, in dispatch
+    response = self.handle_exception(exc)
+  File "E:\Python\Lib\site-packages\rest_framework\views.py", line 475, in handle_exception
+    self.raise_uncaught_exception(exc)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^
+  File "E:\Python\Lib\site-packages\rest_framework\views.py", line 486, in raise_uncaught_exception
+    raise exc
+  File "E:\Python\Lib\site-packages\rest_framework\views.py", line 512, in dispatch
+    response = handler(request, *args, **kwargs)
+  File "E:\Python\Lib\site-packages\rest_framework\generics.py", line 194, in post
+    return self.create(request, *args, **kwargs)
+           ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\2VAKIL\AloVakil\users\views.py", line 38, in create
+    temp_id = reset_code_instance.id
+              ^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'str' object has no attribute 'id'
+[2025-10-21 16:03:47,215] [ERROR] [django.server] "POST /users/register/ HTTP/1.1" 500 112800
+[2025-10-21 16:03:52,587] [ERROR] [common] {"type": "exception", "user": "Anonymous", "method": "POST", "path": "/users/register/", "query_params": {}, "body": "<unreadable body>", "exception": "'str' object has no attribute 'id'", "traceback": "Traceback (most recent call last):\n  File \"E:\\Python\\Lib\\site-packages\\django\\core\\handlers\\base.py\", line 197, in _get_response\n    response = wrapped_callback(request, *callback_args, **callback_kwargs)\n  File \"E:\\Python\\Lib\\site-packages\\django\\views\\decorators\\csrf.py\", line 65, in _view_wrapper\n    return view_func(request, *args, **kwargs)\n  File \"E:\\Python\\Lib\\site-packages\\django\\views\\generic\\base.py\", line 105, in view\n    return self.dispatch(request, *args, **kwargs)\n           ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\views.py\", line 515, in dispatch\n    response = self.handle_exception(exc)\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\views.py\", line 475, in handle_exception\n    self.raise_uncaught_exception(exc)\n    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\views.py\", line 486, in raise_uncaught_exception\n    raise exc\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\views.py\", line 512, in dispatch\n    response = handler(request, *args, **kwargs)\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\generics.py\", line 194, in post\n    return self.create(request, *args, **kwargs)\n           ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"E:\\2VAKIL\\AloVakil\\users\\views.py\", line 38, in create\n    temp_id = reset_code_instance.id\n              ^^^^^^^^^^^^^^^^^^^^^^\nAttributeError: 'str' object has no attribute 'id'\n"}
+[2025-10-21 16:03:52,602] [ERROR] [django.request] Internal Server Error: /users/register/
+Traceback (most recent call last):
+  File "E:\Python\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "E:\Python\Lib\site-packages\django\core\handlers\base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "E:\Python\Lib\site-packages\django\views\decorators\csrf.py", line 65, in _view_wrapper
+    return view_func(request, *args, **kwargs)
+  File "E:\Python\Lib\site-packages\django\views\generic\base.py", line 105, in view
+    return self.dispatch(request, *args, **kwargs)
+           ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\Python\Lib\site-packages\rest_framework\views.py", line 515, in dispatch
+    response = self.handle_exception(exc)
+  File "E:\Python\Lib\site-packages\rest_framework\views.py", line 475, in handle_exception
+    self.raise_uncaught_exception(exc)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^
+  File "E:\Python\Lib\site-packages\rest_framework\views.py", line 486, in raise_uncaught_exception
+    raise exc
+  File "E:\Python\Lib\site-packages\rest_framework\views.py", line 512, in dispatch
+    response = handler(request, *args, **kwargs)
+  File "E:\Python\Lib\site-packages\rest_framework\generics.py", line 194, in post
+    return self.create(request, *args, **kwargs)
+           ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\2VAKIL\AloVakil\users\views.py", line 38, in create
+    temp_id = reset_code_instance.id
+              ^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'str' object has no attribute 'id'
+[2025-10-21 16:03:52,604] [ERROR] [django.server] "POST /users/register/ HTTP/1.1" 500 112933
+[2025-10-21 16:11:33,302] [ERROR] [common] {"type": "exception", "user": "Anonymous", "method": "POST", "path": "/users/register/", "query_params": {}, "body": "<unreadable body>", "exception": "'str' object has no attribute 'id'", "traceback": "Traceback (most recent call last):\n  File \"E:\\Python\\Lib\\site-packages\\django\\core\\handlers\\base.py\", line 197, in _get_response\n    response = wrapped_callback(request, *callback_args, **callback_kwargs)\n  File \"E:\\Python\\Lib\\site-packages\\django\\views\\decorators\\csrf.py\", line 65, in _view_wrapper\n    return view_func(request, *args, **kwargs)\n  File \"E:\\Python\\Lib\\site-packages\\django\\views\\generic\\base.py\", line 105, in view\n    return self.dispatch(request, *args, **kwargs)\n           ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\views.py\", line 515, in dispatch\n    response = self.handle_exception(exc)\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\views.py\", line 475, in handle_exception\n    self.raise_uncaught_exception(exc)\n    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\views.py\", line 486, in raise_uncaught_exception\n    raise exc\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\views.py\", line 512, in dispatch\n    response = handler(request, *args, **kwargs)\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\generics.py\", line 194, in post\n    return self.create(request, *args, **kwargs)\n           ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"E:\\2VAKIL\\AloVakil\\users\\views.py\", line 42, in create\n    temp_id = reset_code_instance.id\n              ^^^^^^^^^^^^^^^^^^^^^^\nAttributeError: 'str' object has no attribute 'id'\n"}
+[2025-10-21 16:11:33,319] [ERROR] [django.request] Internal Server Error: /users/register/
+Traceback (most recent call last):
+  File "E:\Python\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "E:\Python\Lib\site-packages\django\core\handlers\base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "E:\Python\Lib\site-packages\django\views\decorators\csrf.py", line 65, in _view_wrapper
+    return view_func(request, *args, **kwargs)
+  File "E:\Python\Lib\site-packages\django\views\generic\base.py", line 105, in view
+    return self.dispatch(request, *args, **kwargs)
+           ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\Python\Lib\site-packages\rest_framework\views.py", line 515, in dispatch
+    response = self.handle_exception(exc)
+  File "E:\Python\Lib\site-packages\rest_framework\views.py", line 475, in handle_exception
+    self.raise_uncaught_exception(exc)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^
+  File "E:\Python\Lib\site-packages\rest_framework\views.py", line 486, in raise_uncaught_exception
+    raise exc
+  File "E:\Python\Lib\site-packages\rest_framework\views.py", line 512, in dispatch
+    response = handler(request, *args, **kwargs)
+  File "E:\Python\Lib\site-packages\rest_framework\generics.py", line 194, in post
+    return self.create(request, *args, **kwargs)
+           ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\2VAKIL\AloVakil\users\views.py", line 42, in create
+    temp_id = reset_code_instance.id
+              ^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'str' object has no attribute 'id'
+[2025-10-21 16:11:33,322] [ERROR] [django.server] "POST /users/register/ HTTP/1.1" 500 113150
