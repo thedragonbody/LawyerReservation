@@ -1695,3 +1695,198 @@ Traceback (most recent call last):
               ^^^^^^^^^^^^^^^^^^^^^^
 AttributeError: 'str' object has no attribute 'id'
 [2025-10-21 16:11:33,322] [ERROR] [django.server] "POST /users/register/ HTTP/1.1" 500 113150
+[2025-10-21 23:06:40,643] [ERROR] [common] {"type": "exception", "user": "Anonymous", "method": "POST", "path": "/users/forgot-password/", "query_params": {}, "body": "<unreadable body>", "exception": "'1'", "traceback": "Traceback (most recent call last):\n  File \"E:\\Python\\Lib\\site-packages\\django\\core\\handlers\\base.py\", line 197, in _get_response\n    response = wrapped_callback(request, *callback_args, **callback_kwargs)\n  File \"E:\\Python\\Lib\\site-packages\\django\\views\\decorators\\csrf.py\", line 65, in _view_wrapper\n    return view_func(request, *args, **kwargs)\n  File \"E:\\Python\\Lib\\site-packages\\django\\views\\generic\\base.py\", line 105, in view\n    return self.dispatch(request, *args, **kwargs)\n           ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\views.py\", line 515, in dispatch\n    response = self.handle_exception(exc)\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\views.py\", line 475, in handle_exception\n    self.raise_uncaught_exception(exc)\n    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\views.py\", line 486, in raise_uncaught_exception\n    raise exc\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\views.py\", line 503, in dispatch\n    self.initial(request, *args, **kwargs)\n    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\views.py\", line 422, in initial\n    self.check_throttles(request)\n    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\views.py\", line 364, in check_throttles\n    for throttle in self.get_throttles():\n                    ~~~~~~~~~~~~~~~~~~^^\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\views.py\", line 290, in get_throttles\n    return [throttle() for throttle in self.throttle_classes]\n            ~~~~~~~~^^\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\throttling.py\", line 71, in __init__\n    self.num_requests, self.duration = self.parse_rate(self.rate)\n                                       ~~~~~~~~~~~~~~~^^^^^^^^^^^\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\throttling.py\", line 106, in parse_rate\n    duration = {'s': 1, 'm': 60, 'h': 3600, 'd': 86400}[period[0]]\n               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^\nKeyError: '1'\n"}
+[2025-10-21 23:06:40,700] [ERROR] [django.request] Internal Server Error: /users/forgot-password/
+Traceback (most recent call last):
+  File "E:\Python\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "E:\Python\Lib\site-packages\django\core\handlers\base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "E:\Python\Lib\site-packages\django\views\decorators\csrf.py", line 65, in _view_wrapper
+    return view_func(request, *args, **kwargs)
+  File "E:\Python\Lib\site-packages\django\views\generic\base.py", line 105, in view
+    return self.dispatch(request, *args, **kwargs)
+           ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\Python\Lib\site-packages\rest_framework\views.py", line 515, in dispatch
+    response = self.handle_exception(exc)
+  File "E:\Python\Lib\site-packages\rest_framework\views.py", line 475, in handle_exception
+    self.raise_uncaught_exception(exc)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^
+  File "E:\Python\Lib\site-packages\rest_framework\views.py", line 486, in raise_uncaught_exception
+    raise exc
+  File "E:\Python\Lib\site-packages\rest_framework\views.py", line 503, in dispatch
+    self.initial(request, *args, **kwargs)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\Python\Lib\site-packages\rest_framework\views.py", line 422, in initial
+    self.check_throttles(request)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "E:\Python\Lib\site-packages\rest_framework\views.py", line 364, in check_throttles
+    for throttle in self.get_throttles():
+                    ~~~~~~~~~~~~~~~~~~^^
+  File "E:\Python\Lib\site-packages\rest_framework\views.py", line 290, in get_throttles
+    return [throttle() for throttle in self.throttle_classes]
+            ~~~~~~~~^^
+  File "E:\Python\Lib\site-packages\rest_framework\throttling.py", line 71, in __init__
+    self.num_requests, self.duration = self.parse_rate(self.rate)
+                                       ~~~~~~~~~~~~~~~^^^^^^^^^^^
+  File "E:\Python\Lib\site-packages\rest_framework\throttling.py", line 106, in parse_rate
+    duration = {'s': 1, 'm': 60, 'h': 3600, 'd': 86400}[period[0]]
+               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^
+KeyError: '1'
+[2025-10-21 23:06:40,702] [ERROR] [django.server] "POST /users/forgot-password/ HTTP/1.1" 500 123365
+[2025-10-21 23:06:42,677] [ERROR] [common] {"type": "exception", "user": "Anonymous", "method": "POST", "path": "/users/forgot-password/", "query_params": {}, "body": "<unreadable body>", "exception": "'1'", "traceback": "Traceback (most recent call last):\n  File \"E:\\Python\\Lib\\site-packages\\django\\core\\handlers\\base.py\", line 197, in _get_response\n    response = wrapped_callback(request, *callback_args, **callback_kwargs)\n  File \"E:\\Python\\Lib\\site-packages\\django\\views\\decorators\\csrf.py\", line 65, in _view_wrapper\n    return view_func(request, *args, **kwargs)\n  File \"E:\\Python\\Lib\\site-packages\\django\\views\\generic\\base.py\", line 105, in view\n    return self.dispatch(request, *args, **kwargs)\n           ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\views.py\", line 515, in dispatch\n    response = self.handle_exception(exc)\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\views.py\", line 475, in handle_exception\n    self.raise_uncaught_exception(exc)\n    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\views.py\", line 486, in raise_uncaught_exception\n    raise exc\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\views.py\", line 503, in dispatch\n    self.initial(request, *args, **kwargs)\n    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\views.py\", line 422, in initial\n    self.check_throttles(request)\n    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\views.py\", line 364, in check_throttles\n    for throttle in self.get_throttles():\n                    ~~~~~~~~~~~~~~~~~~^^\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\views.py\", line 290, in get_throttles\n    return [throttle() for throttle in self.throttle_classes]\n            ~~~~~~~~^^\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\throttling.py\", line 71, in __init__\n    self.num_requests, self.duration = self.parse_rate(self.rate)\n                                       ~~~~~~~~~~~~~~~^^^^^^^^^^^\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\throttling.py\", line 106, in parse_rate\n    duration = {'s': 1, 'm': 60, 'h': 3600, 'd': 86400}[period[0]]\n               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^\nKeyError: '1'\n"}
+[2025-10-21 23:06:42,692] [ERROR] [django.request] Internal Server Error: /users/forgot-password/
+Traceback (most recent call last):
+  File "E:\Python\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "E:\Python\Lib\site-packages\django\core\handlers\base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "E:\Python\Lib\site-packages\django\views\decorators\csrf.py", line 65, in _view_wrapper
+    return view_func(request, *args, **kwargs)
+  File "E:\Python\Lib\site-packages\django\views\generic\base.py", line 105, in view
+    return self.dispatch(request, *args, **kwargs)
+           ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\Python\Lib\site-packages\rest_framework\views.py", line 515, in dispatch
+    response = self.handle_exception(exc)
+  File "E:\Python\Lib\site-packages\rest_framework\views.py", line 475, in handle_exception
+    self.raise_uncaught_exception(exc)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^
+  File "E:\Python\Lib\site-packages\rest_framework\views.py", line 486, in raise_uncaught_exception
+    raise exc
+  File "E:\Python\Lib\site-packages\rest_framework\views.py", line 503, in dispatch
+    self.initial(request, *args, **kwargs)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\Python\Lib\site-packages\rest_framework\views.py", line 422, in initial
+    self.check_throttles(request)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "E:\Python\Lib\site-packages\rest_framework\views.py", line 364, in check_throttles
+    for throttle in self.get_throttles():
+                    ~~~~~~~~~~~~~~~~~~^^
+  File "E:\Python\Lib\site-packages\rest_framework\views.py", line 290, in get_throttles
+    return [throttle() for throttle in self.throttle_classes]
+            ~~~~~~~~^^
+  File "E:\Python\Lib\site-packages\rest_framework\throttling.py", line 71, in __init__
+    self.num_requests, self.duration = self.parse_rate(self.rate)
+                                       ~~~~~~~~~~~~~~~^^^^^^^^^^^
+  File "E:\Python\Lib\site-packages\rest_framework\throttling.py", line 106, in parse_rate
+    duration = {'s': 1, 'm': 60, 'h': 3600, 'd': 86400}[period[0]]
+               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^
+KeyError: '1'
+[2025-10-21 23:06:42,695] [ERROR] [django.server] "POST /users/forgot-password/ HTTP/1.1" 500 123365
+[2025-10-21 23:06:43,487] [ERROR] [common] {"type": "exception", "user": "Anonymous", "method": "GET", "path": "/users/forgot-password/", "query_params": {}, "body": {}, "exception": "'1'", "traceback": "Traceback (most recent call last):\n  File \"E:\\Python\\Lib\\site-packages\\django\\core\\handlers\\base.py\", line 197, in _get_response\n    response = wrapped_callback(request, *callback_args, **callback_kwargs)\n  File \"E:\\Python\\Lib\\site-packages\\django\\views\\decorators\\csrf.py\", line 65, in _view_wrapper\n    return view_func(request, *args, **kwargs)\n  File \"E:\\Python\\Lib\\site-packages\\django\\views\\generic\\base.py\", line 105, in view\n    return self.dispatch(request, *args, **kwargs)\n           ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\views.py\", line 515, in dispatch\n    response = self.handle_exception(exc)\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\views.py\", line 475, in handle_exception\n    self.raise_uncaught_exception(exc)\n    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\views.py\", line 486, in raise_uncaught_exception\n    raise exc\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\views.py\", line 503, in dispatch\n    self.initial(request, *args, **kwargs)\n    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\views.py\", line 422, in initial\n    self.check_throttles(request)\n    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\views.py\", line 364, in check_throttles\n    for throttle in self.get_throttles():\n                    ~~~~~~~~~~~~~~~~~~^^\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\views.py\", line 290, in get_throttles\n    return [throttle() for throttle in self.throttle_classes]\n            ~~~~~~~~^^\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\throttling.py\", line 71, in __init__\n    self.num_requests, self.duration = self.parse_rate(self.rate)\n                                       ~~~~~~~~~~~~~~~^^^^^^^^^^^\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\throttling.py\", line 106, in parse_rate\n    duration = {'s': 1, 'm': 60, 'h': 3600, 'd': 86400}[period[0]]\n               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^\nKeyError: '1'\n"}
+[2025-10-21 23:06:43,502] [ERROR] [django.request] Internal Server Error: /users/forgot-password/
+Traceback (most recent call last):
+  File "E:\Python\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "E:\Python\Lib\site-packages\django\core\handlers\base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "E:\Python\Lib\site-packages\django\views\decorators\csrf.py", line 65, in _view_wrapper
+    return view_func(request, *args, **kwargs)
+  File "E:\Python\Lib\site-packages\django\views\generic\base.py", line 105, in view
+    return self.dispatch(request, *args, **kwargs)
+           ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\Python\Lib\site-packages\rest_framework\views.py", line 515, in dispatch
+    response = self.handle_exception(exc)
+  File "E:\Python\Lib\site-packages\rest_framework\views.py", line 475, in handle_exception
+    self.raise_uncaught_exception(exc)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^
+  File "E:\Python\Lib\site-packages\rest_framework\views.py", line 486, in raise_uncaught_exception
+    raise exc
+  File "E:\Python\Lib\site-packages\rest_framework\views.py", line 503, in dispatch
+    self.initial(request, *args, **kwargs)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\Python\Lib\site-packages\rest_framework\views.py", line 422, in initial
+    self.check_throttles(request)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "E:\Python\Lib\site-packages\rest_framework\views.py", line 364, in check_throttles
+    for throttle in self.get_throttles():
+                    ~~~~~~~~~~~~~~~~~~^^
+  File "E:\Python\Lib\site-packages\rest_framework\views.py", line 290, in get_throttles
+    return [throttle() for throttle in self.throttle_classes]
+            ~~~~~~~~^^
+  File "E:\Python\Lib\site-packages\rest_framework\throttling.py", line 71, in __init__
+    self.num_requests, self.duration = self.parse_rate(self.rate)
+                                       ~~~~~~~~~~~~~~~^^^^^^^^^^^
+  File "E:\Python\Lib\site-packages\rest_framework\throttling.py", line 106, in parse_rate
+    duration = {'s': 1, 'm': 60, 'h': 3600, 'd': 86400}[period[0]]
+               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^
+KeyError: '1'
+[2025-10-21 23:06:43,504] [ERROR] [django.server] "GET /users/forgot-password/ HTTP/1.1" 500 122309
+[2025-10-21 23:06:51,666] [ERROR] [common] {"type": "exception", "user": "Anonymous", "method": "GET", "path": "/users/forgot-password/", "query_params": {}, "body": {}, "exception": "'1'", "traceback": "Traceback (most recent call last):\n  File \"E:\\Python\\Lib\\site-packages\\django\\core\\handlers\\base.py\", line 197, in _get_response\n    response = wrapped_callback(request, *callback_args, **callback_kwargs)\n  File \"E:\\Python\\Lib\\site-packages\\django\\views\\decorators\\csrf.py\", line 65, in _view_wrapper\n    return view_func(request, *args, **kwargs)\n  File \"E:\\Python\\Lib\\site-packages\\django\\views\\generic\\base.py\", line 105, in view\n    return self.dispatch(request, *args, **kwargs)\n           ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\views.py\", line 515, in dispatch\n    response = self.handle_exception(exc)\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\views.py\", line 475, in handle_exception\n    self.raise_uncaught_exception(exc)\n    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\views.py\", line 486, in raise_uncaught_exception\n    raise exc\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\views.py\", line 503, in dispatch\n    self.initial(request, *args, **kwargs)\n    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\views.py\", line 422, in initial\n    self.check_throttles(request)\n    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\views.py\", line 364, in check_throttles\n    for throttle in self.get_throttles():\n                    ~~~~~~~~~~~~~~~~~~^^\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\views.py\", line 290, in get_throttles\n    return [throttle() for throttle in self.throttle_classes]\n            ~~~~~~~~^^\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\throttling.py\", line 71, in __init__\n    self.num_requests, self.duration = self.parse_rate(self.rate)\n                                       ~~~~~~~~~~~~~~~^^^^^^^^^^^\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\throttling.py\", line 106, in parse_rate\n    duration = {'s': 1, 'm': 60, 'h': 3600, 'd': 86400}[period[0]]\n               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^\nKeyError: '1'\n"}
+[2025-10-21 23:06:51,681] [ERROR] [django.request] Internal Server Error: /users/forgot-password/
+Traceback (most recent call last):
+  File "E:\Python\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "E:\Python\Lib\site-packages\django\core\handlers\base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "E:\Python\Lib\site-packages\django\views\decorators\csrf.py", line 65, in _view_wrapper
+    return view_func(request, *args, **kwargs)
+  File "E:\Python\Lib\site-packages\django\views\generic\base.py", line 105, in view
+    return self.dispatch(request, *args, **kwargs)
+           ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\Python\Lib\site-packages\rest_framework\views.py", line 515, in dispatch
+    response = self.handle_exception(exc)
+  File "E:\Python\Lib\site-packages\rest_framework\views.py", line 475, in handle_exception
+    self.raise_uncaught_exception(exc)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^
+  File "E:\Python\Lib\site-packages\rest_framework\views.py", line 486, in raise_uncaught_exception
+    raise exc
+  File "E:\Python\Lib\site-packages\rest_framework\views.py", line 503, in dispatch
+    self.initial(request, *args, **kwargs)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\Python\Lib\site-packages\rest_framework\views.py", line 422, in initial
+    self.check_throttles(request)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "E:\Python\Lib\site-packages\rest_framework\views.py", line 364, in check_throttles
+    for throttle in self.get_throttles():
+                    ~~~~~~~~~~~~~~~~~~^^
+  File "E:\Python\Lib\site-packages\rest_framework\views.py", line 290, in get_throttles
+    return [throttle() for throttle in self.throttle_classes]
+            ~~~~~~~~^^
+  File "E:\Python\Lib\site-packages\rest_framework\throttling.py", line 71, in __init__
+    self.num_requests, self.duration = self.parse_rate(self.rate)
+                                       ~~~~~~~~~~~~~~~^^^^^^^^^^^
+  File "E:\Python\Lib\site-packages\rest_framework\throttling.py", line 106, in parse_rate
+    duration = {'s': 1, 'm': 60, 'h': 3600, 'd': 86400}[period[0]]
+               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^
+KeyError: '1'
+[2025-10-21 23:06:51,683] [ERROR] [django.server] "GET /users/forgot-password/ HTTP/1.1" 500 122309
+[2025-10-21 23:07:01,711] [ERROR] [common] {"type": "exception", "user": "Anonymous", "method": "GET", "path": "/users/register/", "query_params": {}, "body": {}, "exception": "'1'", "traceback": "Traceback (most recent call last):\n  File \"E:\\Python\\Lib\\site-packages\\django\\core\\handlers\\base.py\", line 197, in _get_response\n    response = wrapped_callback(request, *callback_args, **callback_kwargs)\n  File \"E:\\Python\\Lib\\site-packages\\django\\views\\decorators\\csrf.py\", line 65, in _view_wrapper\n    return view_func(request, *args, **kwargs)\n  File \"E:\\Python\\Lib\\site-packages\\django\\views\\generic\\base.py\", line 105, in view\n    return self.dispatch(request, *args, **kwargs)\n           ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\views.py\", line 515, in dispatch\n    response = self.handle_exception(exc)\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\views.py\", line 475, in handle_exception\n    self.raise_uncaught_exception(exc)\n    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\views.py\", line 486, in raise_uncaught_exception\n    raise exc\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\views.py\", line 503, in dispatch\n    self.initial(request, *args, **kwargs)\n    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\views.py\", line 422, in initial\n    self.check_throttles(request)\n    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\views.py\", line 364, in check_throttles\n    for throttle in self.get_throttles():\n                    ~~~~~~~~~~~~~~~~~~^^\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\views.py\", line 290, in get_throttles\n    return [throttle() for throttle in self.throttle_classes]\n            ~~~~~~~~^^\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\throttling.py\", line 71, in __init__\n    self.num_requests, self.duration = self.parse_rate(self.rate)\n                                       ~~~~~~~~~~~~~~~^^^^^^^^^^^\n  File \"E:\\Python\\Lib\\site-packages\\rest_framework\\throttling.py\", line 106, in parse_rate\n    duration = {'s': 1, 'm': 60, 'h': 3600, 'd': 86400}[period[0]]\n               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^\nKeyError: '1'\n"}
+[2025-10-21 23:07:01,727] [ERROR] [django.request] Internal Server Error: /users/register/
+Traceback (most recent call last):
+  File "E:\Python\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "E:\Python\Lib\site-packages\django\core\handlers\base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "E:\Python\Lib\site-packages\django\views\decorators\csrf.py", line 65, in _view_wrapper
+    return view_func(request, *args, **kwargs)
+  File "E:\Python\Lib\site-packages\django\views\generic\base.py", line 105, in view
+    return self.dispatch(request, *args, **kwargs)
+           ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\Python\Lib\site-packages\rest_framework\views.py", line 515, in dispatch
+    response = self.handle_exception(exc)
+  File "E:\Python\Lib\site-packages\rest_framework\views.py", line 475, in handle_exception
+    self.raise_uncaught_exception(exc)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^
+  File "E:\Python\Lib\site-packages\rest_framework\views.py", line 486, in raise_uncaught_exception
+    raise exc
+  File "E:\Python\Lib\site-packages\rest_framework\views.py", line 503, in dispatch
+    self.initial(request, *args, **kwargs)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\Python\Lib\site-packages\rest_framework\views.py", line 422, in initial
+    self.check_throttles(request)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "E:\Python\Lib\site-packages\rest_framework\views.py", line 364, in check_throttles
+    for throttle in self.get_throttles():
+                    ~~~~~~~~~~~~~~~~~~^^
+  File "E:\Python\Lib\site-packages\rest_framework\views.py", line 290, in get_throttles
+    return [throttle() for throttle in self.throttle_classes]
+            ~~~~~~~~^^
+  File "E:\Python\Lib\site-packages\rest_framework\throttling.py", line 71, in __init__
+    self.num_requests, self.duration = self.parse_rate(self.rate)
+                                       ~~~~~~~~~~~~~~~^^^^^^^^^^^
+  File "E:\Python\Lib\site-packages\rest_framework\throttling.py", line 106, in parse_rate
+    duration = {'s': 1, 'm': 60, 'h': 3600, 'd': 86400}[period[0]]
+               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^
+KeyError: '1'
+[2025-10-21 23:07:01,729] [ERROR] [django.server] "GET /users/register/ HTTP/1.1" 500 122124

@@ -222,6 +222,8 @@ REST_FRAMEWORK = {
         'anon': '20/min',
         'user': '200/min',
         'otp': '3/min',   # استفاده از scope="otp" در کلاس throttle یا در view
+        'sms_request': '5/15m',
+        'critical_sms': '2/1m',
     }
 }
 
