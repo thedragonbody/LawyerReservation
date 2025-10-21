@@ -3,11 +3,18 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 from django.utils import timezone
-from .models import AIQuestion, AIErrorLog
+from .models import AIQuestion, AIErrorLog, AIPlan, Subscription # 💡 Subscription و AIPlan هم اضافه شد
 from .serializers import AIQuestionSerializer
 from .utils import ask_ai_with_retry, format_ai_output
 from .limits import can_user_ask, increment_usage
-import logging
+from payments.utils import create_payment_request
+from rest_framework.views import APIView
+from django.db import transaction
+from django.shortcuts import get_object_or_404
+from payments.models import Payment
+from django.conf import settings
+
+import logging # 💡 مشکل اینجا بود: این import اضافه شد
 
 # تنظیم logger برای AI assistant
 logger = logging.getLogger("ai_assistant")
@@ -16,10 +23,7 @@ logger = logging.getLogger("ai_assistant")
 class AskAIView(generics.CreateAPIView):
     """
     ویو برای پرسش به AI
-    - بررسی quota و سهمیه کاربر
-    - ارسال آخرین ۱۰ پرسش مهم (importance) برای multi-turn
-    - فراخوانی AI با retry هوشمند
-    - ذخیره خطا در مدل AIErrorLog
+    ... (ادامه کلاس بدون تغییر) ...
     """
     queryset = AIQuestion.objects.all()
     serializer_class = AIQuestionSerializer
@@ -40,10 +44,10 @@ class AskAIView(generics.CreateAPIView):
         # 🔹 بررسی quota
         allowed, reason = can_user_ask(self.request.user, cost=1)
         if not allowed:
-            return Response(
-                {"detail": "Quota exceeded", "type": reason},
-                status=status.HTTP_429_TOO_MANY_REQUESTS
-            )
+            # 💡 بهبود: شما نمی‌توانید از داخل perform_create یک Response برگردانید
+            # این متد برای برگرداندن Response طراحی نشده و باعث خطا می‌شود.
+            # باید این منطق را به متد create منتقل کنیم.
+            raise serializers.ValidationError({"detail": "Quota exceeded", "type": reason})
 
         # 🔹 آماده‌سازی history برای multi-turn
         history_qs = AIQuestion.objects.filter(user=self.request.user).order_by("-created_at")[:10]
@@ -91,6 +95,22 @@ class AskAIView(generics.CreateAPIView):
             logger.error(f"AI ask failed for user {self.request.user}: {e}")
             raise serializers.ValidationError({"detail": f"AI error: {e}"})
 
+    # 💡 بهبود ۲: انتقال منطق چک کردن Quota به متد create
+    def create(self, request, *args, **kwargs):
+        allowed, reason = can_user_ask(request.user, cost=1)
+        if not allowed:
+            return Response(
+                {"detail": "Quota exceeded", "type": reason},
+                status=status.HTTP_429_TOO_MANY_REQUESTS
+            )
+        
+        # اگر مجاز بود، ادامه فرایند create (که perform_create را صدا می‌زند)
+        try:
+            return super().create(request, *args, **kwargs)
+        except serializers.ValidationError as e:
+            # خطاهایی که از perform_create می‌آیند (مثل خطای AI)
+            return Response(e.detail, status=status.HTTP_400_BAD_REQUEST)
+
 
 class AIQuestionPagination(PageNumberPagination):
     page_size = 20
@@ -108,3 +128,63 @@ class AIQuestionListView(generics.ListAPIView):
 
     def get_queryset(self):
         return AIQuestion.objects.filter(user=self.request.user).order_by("-created_at")
+    
+class CreateSubscriptionPaymentView(APIView):
+    """
+    ویو برای ایجاد پرداخت جهت خرید یا تمدید اشتراک AI.
+    """
+    permission_classes = [IsAuthenticated]
+
+    @transaction.atomic
+    def post(self, request, *args, **kwargs):
+        plan_id = request.data.get("plan_id")
+        if not plan_id:
+            return Response({"detail": "plan_id الزامی است."}, status=status.HTTP_400_BAD_REQUEST)
+
+        plan = get_object_or_404(AIPlan, id=plan_id)
+        user = request.user
+
+        # ۱. ایجاد اشتراک (غیرفعال تا زمان پرداخت)
+        subscription = Subscription.objects.create(
+            user=user,
+            plan=plan,
+            active=False # در انتظار پرداخت
+        )
+
+        # ۲. ایجاد رکورد پرداخت در انتظار
+        multiplier = getattr(settings, "PAYMENT_AMOUNT_MULTIPLIER", 1)
+        amount_to_pay = plan.price_cents * multiplier 
+
+        payment = Payment.objects.create(
+            user=user,
+            amount=amount_to_pay,
+            subscription=subscription, 
+            status=Payment.Status.PENDING,
+            payment_method="idpay" 
+        )
+
+        # ۳. ایجاد درخواست در درگاه (IDPay)
+        try:
+            callback_url = "http://localhost:3000/dashboard/ai/payment-verify/" 
+            
+            provider_data = create_payment_request(
+                order_id=str(payment.id),
+                amount=int(amount_to_pay), 
+                callback=callback_url,
+                phone=user.phone_number,
+                desc=f"خرید اشتراک {plan.name}"
+            )
+            
+            payment.transaction_id = provider_data.get('id')
+            payment.save(update_fields=['transaction_id'])
+
+            return Response({
+                "payment_id": payment.id,
+                "payment_link": provider_data.get('link'),
+                "transaction_id": provider_data.get('id')
+            }, status=status.HTTP_201_CREATED)
+
+        except Exception as e:
+            logger.error(f"Subscription payment creation failed for user {user.id}: {e}")
+            transaction.set_rollback(True)
+            return Response({"detail": f"خطا در ایجاد پرداخت: {e}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

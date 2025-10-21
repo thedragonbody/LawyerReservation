@@ -59,12 +59,19 @@ class Payment(models.Model):
 
         # --- فعالسازی appointment
         if self.appointment:
+            # اطمینان از اینکه appointments.models import شده
+            # یا اینکه متد confirm در خود مدل appointment تعریف شده
             self.appointment.confirm(transaction_id=self.transaction_id)
 
         # --- فعالسازی subscription
         if self.subscription:
             self.subscription.active = True
-            duration = getattr(self.subscription, "duration_days", 30)
+            
+            # 💡 رفع باگ: duration_days از 'plan' خوانده شود نه خود 'subscription'
+            duration = 30 # پیش‌فرض
+            if self.subscription.plan:
+                duration = getattr(self.subscription.plan, "duration_days", 30)
+            
             self.subscription.ends_at = timezone.now() + timezone.timedelta(days=duration)
             self.subscription.save(update_fields=["active", "ends_at"])
 
