@@ -1,19 +1,9 @@
 from django.urls import path
-from rest_framework_simplejwt.views import TokenRefreshView, TokenBlacklistView
-from .views import (
-    RegisterView,
-    VerifyOTPView,
-    LoginView,
-    ForgotPasswordView,
-    ResetPasswordView,
-)
+from .views import SendLoginOTPView, VerifyLoginOTPView
+from rest_framework_simplejwt.views import TokenRefreshView
 
 urlpatterns = [
-    path("register/", RegisterView.as_view(), name="register"),
-    path("verify-otp/", VerifyOTPView.as_view(), name="verify-otp"),
-    path("login/", LoginView.as_view(), name="login"),
-    path("forgot-password/", ForgotPasswordView.as_view(), name="forgot-password"),
-    path("reset-password/", ResetPasswordView.as_view(), name="reset-password"),
-    path("token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
-    path("token/blacklist/", TokenBlacklistView.as_view(), name="token_blacklist"),
+    path("send-login-otp/", SendLoginOTPView.as_view(), name="send-login-otp"),
+    path("verify-login-otp/", VerifyLoginOTPView.as_view(), name="verify-login-otp"),
+    path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
 ]

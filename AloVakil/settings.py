@@ -222,7 +222,7 @@ REST_FRAMEWORK = {
         'anon': '20/min',
         'user': '200/min',
         'otp': '3/min',   # استفاده از scope="otp" در کلاس throttle یا در view
-        'sms_request': '5/15m',
+        'sms_request': '2/min',
         'critical_sms': '2/1m',
     }
 }
@@ -299,3 +299,5 @@ CELERY_TIMEZONE = "Asia/Tehran"
 
 MIDDLEWARE += ["common.middleware.SessionIdleTimeout"]
 SESSION_IDLE_TIMEOUT = 60*60*24
+
+SMS_PROVIDER = "console"

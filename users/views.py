@@ -1,102 +1,93 @@
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from django.contrib.auth import get_user_model
-from rest_framework_simplejwt.views import TokenObtainPairView
-from .serializers import (
-    UserSerializer, CustomTokenObtainPairSerializer,
-    VerifyOTPSerializer, ForgotPasswordSerializer, ResetPasswordSerializer
-)
+from rest_framework_simplejwt.tokens import RefreshToken
+from .serializers import SendOTPSerializer, VerifyOTPSerializer, UserSerializer
 from .models import PasswordResetCode
-from .utils import register_device_for_user
+from .utils import send_sms_task_or_sync, register_device_for_user
+from .throttles import SMSRequestThrottle
+from rest_framework.throttling import AnonRateThrottle
+from django.db import transaction
 
 User = get_user_model()
 
 
-class RegisterView(generics.CreateAPIView):
-    """ثبت‌نام با شماره موبایل و ارسال OTP"""
-    serializer_class = UserSerializer
+class OTPThrottle(AnonRateThrottle):
+    scope = 'otp'  # مطابقت با REST_FRAMEWORK['DEFAULT_THROTTLE_RATES']
+
+
+class SendLoginOTPView(generics.GenericAPIView):
+    """
+    ارسال OTP برای ورود/ثبت‌نام (Passwordless) از طریق SMS.
+    اگر کاربر وجود نداشته باشد، یک رکورد با is_active=False ساخته می‌شود.
+    """
+    serializer_class = SendOTPSerializer
     permission_classes = [permissions.AllowAny]
+    throttle_classes = [SMSRequestThrottle, OTPThrottle]
 
-    def create(self, request, *args, **kwargs):
-        phone = request.data.get('phone_number')
-        if not phone:
-            return Response({"detail": "شماره موبایل الزامی است."}, status=400)
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        phone = serializer.validated_data['phone_number']
 
-        user, created = User.objects.get_or_create(phone_number=phone)
-        if not user.is_active:
-            user.is_active = False
-            user.save(update_fields=['is_active'])
+        # ایجاد یا بازیابی کاربر (inactive تا تایید)
+        user, _ = User.objects.get_or_create(phone_number=phone, defaults={'is_active': False})
 
-        PasswordResetCode.generate_code(phone, 'signup')
-        return Response({"detail": "کد تأیید ارسال شد."}, status=201)
+        # تولید OTP (PasswordResetCode.generate_code وظیفه ذخیره و print/send را دارد)
+        code = PasswordResetCode.generate_code(phone, 'login')
+
+        # ارسال پیامک (سعی می‌کنیم با Celery ارسال کنیم و در صورت نبودن fallback کنیم)
+        message = f"کد ورود شما: {code}"
+        try:
+            # send_sms_task_or_sync داخل خودش تلاش می‌کنه از Celery استفاده کنه
+            send_sms_task_or_sync(phone, message)
+        except Exception:
+            # نباید crash کنه — fallback داخلی در send_sms_task_or_sync هست
+            pass
+
+        return Response({"detail": "کد ورود ارسال شد."}, status=status.HTTP_200_OK)
 
 
-class VerifyOTPView(generics.GenericAPIView):
-    """تأیید OTP و فعال‌سازی کاربر"""
+class VerifyLoginOTPView(generics.GenericAPIView):
+    """
+    تایید OTP و صدور توکن JWT. پس از تایید، کاربر فعال می‌شود و توکن‌ها برگردانده می‌شود.
+    """
     serializer_class = VerifyOTPSerializer
     permission_classes = [permissions.AllowAny]
 
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-
         phone = serializer.validated_data['phone_number']
+
         user = User.objects.filter(phone_number=phone).first()
         if not user:
-            return Response({"detail": "کاربر یافت نشد."}, status=404)
+            return Response({"detail": "کاربر یافت نشد."}, status=status.HTTP_404_NOT_FOUND)
 
+        # فعال‌سازی کاربر
         user.is_active = True
         user.save(update_fields=['is_active'])
 
-        # ایجاد ClientProfile در صورت عدم وجود
-        from client_profile.models import ClientProfile
-        ClientProfile.objects.get_or_create(user=user)
+        # ساخت ClientProfile در صورت وجود اپ (import داخل try برای جلوگیری از circular import)
+        try:
+            from client_profile.models import ClientProfile
+            ClientProfile.objects.get_or_create(user=user)
+        except Exception:
+            # اگر اپ وجود نداشت یا خطایی وجود داشت، لاگ کن یا نادیده بگیر
+            pass
 
-        # ثبت دستگاه
-        register_device_for_user(user, request)
+        # ثبت دستگاه (سعی می‌کنیم غیرهمزمان ثبت کنیم)
+        try:
+            register_device_for_user(user, request)
+        except Exception:
+            pass
 
-        # ایجاد توکن
-        token_serializer = CustomTokenObtainPairSerializer(data={
-            'phone_number': phone,
-            'password': None
-        })
-        token = CustomTokenObtainPairSerializer.get_token(user)
-        data = {
-            'access': str(token.access_token),
-            'refresh': str(token),
+        # صدور توکن JWT
+        refresh = RefreshToken.for_user(user)
+        tokens = {
+            'access': str(refresh.access_token),
+            'refresh': str(refresh)
         }
-        return Response({'detail': 'تأیید شد', 'tokens': data}, status=200)
 
-
-class LoginView(TokenObtainPairView):
-    """ورود با شماره و رمز عبور"""
-    serializer_class = CustomTokenObtainPairSerializer
-
-    def post(self, request, *args, **kwargs):
-        response = super().post(request, *args, **kwargs)
-        if response.status_code == 200:
-            user = User.objects.filter(phone_number=request.data.get('phone_number')).first()
-            if user:
-                register_device_for_user(user, request)
-        return response
-
-
-class ForgotPasswordView(generics.GenericAPIView):
-    serializer_class = ForgotPasswordSerializer
-    permission_classes = [permissions.AllowAny]
-
-    def post(self, request):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        return Response({"detail": "در صورت وجود حساب، کد ارسال شد."}, status=200)
-
-
-class ResetPasswordView(generics.GenericAPIView):
-    serializer_class = ResetPasswordSerializer
-    permission_classes = [permissions.AllowAny]
-
-    def post(self, request):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response({"detail": "رمز عبور با موفقیت تغییر یافت."}, status=200)
+        user_data = UserSerializer(user).data
+        return Response({'detail': 'ورود موفق', 'tokens': tokens, 'user': user_data}, status=status.HTTP_200_OK)
