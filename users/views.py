@@ -2,7 +2,7 @@ from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from django.contrib.auth import get_user_model
 from rest_framework_simplejwt.tokens import RefreshToken
-from .serializers import SendOTPSerializer, VerifyOTPSerializer, UserSerializer
+from .serializers import SendOTPSerializer, VerifyOTPSerializer, UserSerializer, DeviceListSerializer
 from .models import PasswordResetCode
 from .utils import send_sms_task_or_sync, register_device_for_user
 from .throttles import SMSRequestThrottle
@@ -17,7 +17,6 @@ from rest_framework.permissions import IsAdminUser
 from datetime import timedelta
 from rest_framework.permissions import IsAuthenticated
 from client_profile.models import Device
-from .serializers import DeviceListSerializer
 from django.shortcuts import get_object_or_404
 
 User = get_user_model()
