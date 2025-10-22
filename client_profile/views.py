@@ -107,3 +107,11 @@ class RevokeDeviceView(APIView):
         device.save(update_fields=['revoked'])
         # optionally: blacklist tokens associated with device
         return Response({"detail":"Device revoked."})
+    
+class DeviceListView(generics.ListAPIView):
+    serializer_class = DeviceSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        cp = getattr(self.request.user, 'client_profile', None)
+        return Device.objects.filter(client=cp).order_by('-last_seen')

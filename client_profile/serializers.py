@@ -19,5 +19,5 @@ class VerifyOTPSerializer(serializers.Serializer):
 class DeviceSerializer(serializers.ModelSerializer):
     class Meta:
         model = Device
-        fields = ['id', 'name', 'ip_address', 'user_agent', 'last_seen', 'created_at', 'revoked']
-        read_only_fields = ['last_seen', 'created_at']
+        fields = ['id', 'name', 'ip_address', 'user_agent', 'last_seen', 'revoked']
+        read_only_fields = ['last_seen', 'ip_address', 'user_agent', 'name']

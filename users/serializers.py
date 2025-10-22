@@ -1,6 +1,11 @@
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 from .models import PasswordResetCode
+from client_profile.models import ClientProfile
+from django.utils import timezone
+from datetime import timedelta
+from rest_framework import serializers
+from client_profile.models import Device
 
 User = get_user_model()
 
@@ -37,3 +42,17 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         fields = ['id', 'phone_number', 'first_name', 'last_name', 'is_active', 'date_joined']
         read_only_fields = ['id', 'is_active', 'date_joined']
+
+
+
+class ResendOTPSerializer(serializers.Serializer):
+    phone_number = serializers.CharField(max_length=15)
+    
+    
+
+
+class DeviceListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Device
+        fields = ['id', 'name', 'ip_address', 'user_agent', 'last_seen', 'revoked']
+        read_only_fields = ['last_seen']

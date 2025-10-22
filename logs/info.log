@@ -810,3 +810,5 @@
 [2025-10-22 13:10:27,802] [INFO] [common] {"type": "request_end", "user": "Anonymous", "method": "POST", "path": "/users/api/token/refresh/", "status_code": 401}
 [2025-10-22 13:10:32,589] [INFO] [common] {"type": "request_start", "user": "Anonymous", "method": "POST", "path": "/users/api/token/refresh/", "query_params": {}, "body": "<unreadable body>"}
 [2025-10-22 13:10:32,598] [INFO] [common] {"type": "request_end", "user": "Anonymous", "method": "POST", "path": "/users/api/token/refresh/", "status_code": 401}
+[2025-10-22 14:02:16,189] [INFO] [common] {"type": "request_start", "user": "Anonymous", "method": "GET", "path": "/", "query_params": {}, "body": {}}
+[2025-10-22 14:02:16,195] [INFO] [common] {"type": "request_end", "user": "Anonymous", "method": "GET", "path": "/", "status_code": 404}
