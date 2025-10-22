@@ -11,5 +11,4 @@ urlpatterns = [
     path("devices/<int:device_id>/revoke/", RevokeDeviceView.as_view(), name="device-revoke"),
     path("security/check/", SecurityCheckView.as_view(), name="security-check"),
     path("blacklist/cleanup/", BlacklistCleanupView.as_view(), name="blacklist-cleanup"),
-
 ]
