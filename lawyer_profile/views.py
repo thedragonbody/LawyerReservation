@@ -17,3 +17,4 @@ class LawyerProfileDetailView(generics.RetrieveAPIView):
     queryset = LawyerProfile.objects.all()
     serializer_class = LawyerProfileSerializer
     permission_classes = [permissions.AllowAny]
+

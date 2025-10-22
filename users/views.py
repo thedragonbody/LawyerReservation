@@ -2,7 +2,7 @@ from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from django.contrib.auth import get_user_model
 from rest_framework_simplejwt.tokens import RefreshToken
-from .serializers import SendOTPSerializer, VerifyOTPSerializer, UserSerializer, DeviceListSerializer
+from .serializers import SendOTPSerializer, VerifyOTPSerializer, UserSerializer
 from .models import PasswordResetCode
 from .utils import send_sms_task_or_sync, register_device_for_user
 from .throttles import SMSRequestThrottle
@@ -16,7 +16,6 @@ from rest_framework_simplejwt.token_blacklist.models import OutstandingToken, Bl
 from rest_framework.permissions import IsAdminUser
 from datetime import timedelta
 from rest_framework.permissions import IsAuthenticated
-from client_profile.models import Device
 from django.shortcuts import get_object_or_404
 
 User = get_user_model()
@@ -127,26 +126,6 @@ class ResendOTPView(APIView):
         return Response({"detail": "کد تأیید ارسال شد."}, status=status.HTTP_200_OK)
 
 
-class DeviceListView(generics.ListAPIView):
-    serializer_class = DeviceListSerializer
-    permission_classes = [IsAuthenticated]
-
-    def get_queryset(self):
-        cp = getattr(self.request.user, 'client_profile', None)
-        if cp:
-            return Device.objects.filter(client=cp).order_by('-last_seen')
-        return Device.objects.none()
-    
-class RevokeDeviceView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def post(self, request, device_id):
-        cp = getattr(request.user, 'client_profile', None)
-        device = get_object_or_404(Device, pk=device_id, client=cp)
-        device.revoked = True
-        device.save(update_fields=['revoked'])
-        return Response({"detail": "دستگاه غیرفعال شد."}, status=status.HTTP_200_OK)
-    
 class SecurityCheckView(APIView):
     permission_classes = [IsAuthenticated]
 

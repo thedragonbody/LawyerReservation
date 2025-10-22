@@ -88,30 +88,3 @@ class ToggleFavoriteLawyerView(APIView):
             return Response({"favorited": True})
 
 
-class DeviceListView(generics.ListAPIView):
-    serializer_class = DeviceSerializer
-    permission_classes = [permissions.IsAuthenticated]
-
-    def get_queryset(self):
-        cp = getattr(self.request.user, 'client_profile', None)
-        return Device.objects.filter(client=cp).order_by('-last_seen')
-
-
-class RevokeDeviceView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
-
-    def post(self, request, device_id):
-        cp = getattr(request.user, 'client_profile', None)
-        device = get_object_or_404(Device, pk=device_id, client=cp)
-        device.revoked = True
-        device.save(update_fields=['revoked'])
-        # optionally: blacklist tokens associated with device
-        return Response({"detail":"Device revoked."})
-    
-class DeviceListView(generics.ListAPIView):
-    serializer_class = DeviceSerializer
-    permission_classes = [permissions.IsAuthenticated]
-
-    def get_queryset(self):
-        cp = getattr(self.request.user, 'client_profile', None)
-        return Device.objects.filter(client=cp).order_by('-last_seen')

@@ -15,9 +15,3 @@ class SendOTPSerializer(serializers.Serializer):
 class VerifyOTPSerializer(serializers.Serializer):
     phone_number = serializers.CharField(max_length=15)
     code = serializers.CharField(max_length=6)
-
-class DeviceSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Device
-        fields = ['id', 'name', 'ip_address', 'user_agent', 'last_seen', 'revoked']
-        read_only_fields = ['last_seen', 'ip_address', 'user_agent', 'name']

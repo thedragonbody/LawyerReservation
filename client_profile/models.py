@@ -42,17 +42,3 @@ class ClientProfile(models.Model):
     def __str__(self):
         return f"{self.user.phone_number}"
     
-class Device(models.Model):
-    """
-    ثبت دستگاه‌ها و sessionها برای امنیت و قابلیت revoke
-    """
-    client = models.ForeignKey(ClientProfile, on_delete=models.CASCADE, related_name='devices')
-    name = models.CharField(max_length=200, blank=True, null=True)  # Eg: "Chrome on Windows"
-    ip_address = models.GenericIPAddressField(blank=True, null=True)
-    user_agent = models.CharField(max_length=512, blank=True, null=True)
-    last_seen = models.DateTimeField(auto_now=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    revoked = models.BooleanField(default=False)
-
-    def __str__(self):
-        return f"{self.client.user.phone_number} | {self.name or self.ip_address}"
