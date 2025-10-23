@@ -2,7 +2,7 @@ from rest_framework import generics, permissions
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from appointments.models import Appointment, Slot
+from appointments.models import OnlineAppointment, OnlineSlot
 from lawyer_profile.models import LawyerProfile
 from django.db.models import Count, Sum
 from django.utils.timezone import now, timedelta
@@ -20,7 +20,7 @@ class ClientDashboardView(generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        return Appointment.objects.filter(client__user=self.request.user).order_by('slot__start_time')
+        return OnlineAppointment.objects.filter(client__user=self.request.user).order_by('slot__start_time')
 
 # -------------------------
 # لیست رزروها برای Lawyer
@@ -30,7 +30,7 @@ class LawyerDashboardView(generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        return Appointment.objects.filter(lawyer__user=self.request.user).order_by('slot__start_time')
+        return OnlineAppointment.objects.filter(lawyer__user=self.request.user).order_by('slot__start_time')
 
 # -------------------------
 # آمار و نمودارهای داشبورد با فیلتر پیشرفته
@@ -50,11 +50,11 @@ class DashboardStatsView(APIView):
         # تعیین queryset بر اساس نوع کاربر
         # -------------------------
         if hasattr(user, 'client_profile'):
-            qs = Appointment.objects.filter(client__user=user)
+            qs = OnlineAppointment.objects.filter(client__user=user)
         elif hasattr(user, 'lawyer_profile'):
-            qs = Appointment.objects.filter(lawyer__user=user)
+            qs = OnlineAppointment.objects.filter(lawyer__user=user)
         else:
-            qs = Appointment.objects.none()
+            qs = OnlineAppointment.objects.none()
 
         # -------------------------
         # فیلترهای GET
