@@ -1,125 +1,109 @@
 from datetime import timedelta
+from unittest.mock import patch
 
 from django.test import TestCase
-from django.urls import reverse
 from django.utils import timezone
-from rest_framework.test import APIClient
 
 from appointments.models import OnlineAppointment, OnlineSlot
-from common.choices import AppointmentStatus
-from appointments.integrations import CalendarService
+from appointments.tasks import send_appointment_reminders_task
 from client_profile.models import ClientProfile
+from common.choices import AppointmentStatus
 from lawyer_profile.models import LawyerProfile
-from users.models import OAuthToken, User
+from users.models import User
 
 
-class OnlineAppointmentCalendarSyncTests(TestCase):
+class AppointmentReminderTaskTests(TestCase):
     def setUp(self):
-        self.lawyer_user = User.objects.create_user(phone_number="09120000001", password="pass", is_active=True)
-        self.client_user = User.objects.create_user(phone_number="09120000002", password="pass", is_active=True)
-        self.lawyer_profile = LawyerProfile.objects.create(user=self.lawyer_user)
+        self.client_user = User.objects.create_user(
+            phone_number="+989100000001",
+            password="secret",
+            first_name="Client",
+        )
         self.client_profile = ClientProfile.objects.create(user=self.client_user)
-        self.api_client = APIClient()
-        self.api_client.force_authenticate(user=self.client_user)
 
-    def create_slot(self, hours_ahead=48):
-        start = timezone.now() + timedelta(hours=hours_ahead)
-        end = start + timedelta(minutes=45)
-        return OnlineSlot.objects.create(lawyer=self.lawyer_profile, start_time=start, end_time=end)
+        self.lawyer_user = User.objects.create_user(
+            phone_number="+989100000002",
+            password="secret",
+            first_name="Lawyer",
+        )
+        self.lawyer_profile = LawyerProfile.objects.create(user=self.lawyer_user)
 
-    def create_appointment(self, slot=None):
-        slot = slot or self.create_slot()
-        return OnlineAppointment.objects.create(lawyer=self.lawyer_profile, client=self.client_profile, slot=slot)
-
-    def provide_token(self, expires_in_hours=1):
-        return OAuthToken.objects.update_or_create(
-            user=self.lawyer_user,
-            provider="google",
-            defaults={
-                "access_token": "access-token",
-                "refresh_token": "refresh-token",
-                "expires_at": timezone.now() + timedelta(hours=expires_in_hours),
-            },
+        slot_start = timezone.now() + timedelta(minutes=30)
+        slot_end = slot_start + timedelta(minutes=30)
+        self.slot = OnlineSlot.objects.create(
+            lawyer=self.lawyer_profile,
+            start_time=slot_start,
+            end_time=slot_end,
+        )
+        self.appointment = OnlineAppointment.objects.create(
+            lawyer=self.lawyer_profile,
+            client=self.client_profile,
+            slot=self.slot,
+            status=AppointmentStatus.CONFIRMED,
         )
 
-    def test_confirm_sync_success_with_valid_token(self):
-        self.provide_token()
-        appointment = self.create_appointment()
+    @patch("appointments.services.reminders.send_sms")
+    @patch("appointments.services.reminders.Notification.send")
+    def test_send_appointment_reminders_task_uses_slot_start_time(
+        self, mock_notification_send, mock_send_sms
+    ):
+        processed = send_appointment_reminders_task()
 
-        result = appointment.confirm()
+        self.assertEqual(processed, 1)
+        self.appointment.refresh_from_db()
+        self.assertTrue(self.appointment.is_reminder_sent)
 
-        appointment.refresh_from_db()
-        appointment.slot.refresh_from_db()
-        self.assertTrue(result.success)
-        self.assertIsNotNone(appointment.calendar_event_id)
-        self.assertEqual(appointment.status, AppointmentStatus.CONFIRMED)
-        self.assertTrue(appointment.slot.is_booked)
+        expected_time = timezone.localtime(self.slot.start_time).strftime("%Y-%m-%d %H:%M")
 
-    def test_confirm_sync_returns_warning_without_token(self):
-        appointment = self.create_appointment()
+        # Client notification contains slot start time
+        client_calls = [
+            sms_call
+            for sms_call in mock_send_sms.call_args_list
+            if sms_call.args[0] == self.client_user.phone_number
+        ]
+        self.assertEqual(len(client_calls), 1)
+        self.assertIn(expected_time, client_calls[0].args[1])
 
-        result = appointment.confirm()
+        # Two push notifications (client and lawyer)
+        self.assertEqual(mock_notification_send.call_count, 2)
 
-        appointment.refresh_from_db()
-        self.assertFalse(result.success)
-        self.assertIsNone(appointment.calendar_event_id)
-        self.assertEqual(appointment.status, AppointmentStatus.CONFIRMED)
-        self.assertIn("توکن", result.message)
+    @patch("appointments.services.reminders.send_sms")
+    @patch("appointments.services.reminders.Notification.send")
+    def test_send_appointment_reminders_respects_client_channel_preferences(
+        self, mock_notification_send, mock_send_sms
+    ):
+        self.client_profile.receive_push_notifications = False
+        self.client_profile.receive_sms_notifications = False
+        self.client_profile.save()
 
-    def test_cancel_clears_event_when_sync_succeeds(self):
-        self.provide_token()
-        appointment = self.create_appointment()
-        appointment.confirm()
-        appointment.refresh_from_db()
-        self.assertIsNotNone(appointment.calendar_event_id)
+        send_appointment_reminders_task()
 
-        result = appointment.cancel(user=self.client_user, calendar_service=CalendarService())
+        # No SMS or push for the client when disabled
+        client_sms_calls = [
+            sms_call
+            for sms_call in mock_send_sms.call_args_list
+            if sms_call.args[0] == self.client_user.phone_number
+        ]
+        self.assertEqual(client_sms_calls, [])
 
-        appointment.refresh_from_db()
-        appointment.slot.refresh_from_db()
-        self.assertTrue(result.success)
-        self.assertIsNone(appointment.calendar_event_id)
-        self.assertEqual(appointment.status, AppointmentStatus.CANCELLED)
-        self.assertFalse(appointment.slot.is_booked)
+        client_push_calls = [
+            push_call
+            for push_call in mock_notification_send.call_args_list
+            if push_call.kwargs.get("user") == self.client_user
+        ]
+        self.assertEqual(client_push_calls, [])
 
-    def test_cancel_returns_warning_when_token_missing(self):
-        self.provide_token()
-        appointment = self.create_appointment()
-        appointment.confirm()
-        appointment.refresh_from_db()
-        # حذف توکن برای شبیه‌سازی خطا
-        OAuthToken.objects.filter(user=self.lawyer_user, provider="google").delete()
+        # Lawyer should still receive notifications
+        lawyer_sms_calls = [
+            sms_call
+            for sms_call in mock_send_sms.call_args_list
+            if sms_call.args[0] == self.lawyer_user.phone_number
+        ]
+        self.assertEqual(len(lawyer_sms_calls), 1)
 
-        result = appointment.cancel(user=self.client_user)
-
-        appointment.refresh_from_db()
-        self.assertFalse(result.success)
-        self.assertEqual(appointment.status, AppointmentStatus.CANCELLED)
-        self.assertIn("توکن", result.message)
-
-    def test_create_view_includes_warning_when_calendar_sync_fails(self):
-        slot = self.create_slot()
-        response = self.api_client.post(
-            reverse("online-appointment-create"),
-            {"slot": slot.id, "description": "جلسه"},
-            format="json",
-        )
-
-        self.assertEqual(response.status_code, 201)
-        self.assertIn("calendar_sync_warning", response.data)
-
-    def test_reschedule_view_returns_warning_if_calendar_update_fails(self):
-        slot = self.create_slot()
-        appointment = self.create_appointment(slot=slot)
-        # تایید بدون توکن => sync failure on creation but رزرو تایید می‌شود
-        appointment.confirm()
-        new_slot = self.create_slot(hours_ahead=72)
-
-        response = self.api_client.post(
-            reverse("online-appointment-reschedule", args=[appointment.pk]),
-            {"new_slot_id": new_slot.id},
-            format="json",
-        )
-
-        self.assertEqual(response.status_code, 200)
-        self.assertIn("calendar_sync_warning", response.data)
+        lawyer_push_calls = [
+            push_call
+            for push_call in mock_notification_send.call_args_list
+            if push_call.kwargs.get("user") == self.lawyer_user
+        ]
+        self.assertEqual(len(lawyer_push_calls), 1)

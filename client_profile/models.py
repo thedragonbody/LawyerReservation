@@ -16,6 +16,10 @@ class ClientProfile(models.Model):
     phone_verification_code = models.CharField(max_length=6, blank=True, null=True)
     phone_verification_sent_at = models.DateTimeField(blank=True, null=True)
 
+    # === Notification preferences ===
+    receive_push_notifications = models.BooleanField(default=True)
+    receive_sms_notifications = models.BooleanField(default=True)
+
     # Favorite lawyers
     favorites = models.ManyToManyField('lawyer_profile.LawyerProfile', related_name='favorited_by', blank=True)
 

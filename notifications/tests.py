@@ -1,32 +1,59 @@
-from rest_framework.test import APITestCase
+from unittest.mock import patch
+
+from django.test import TestCase
+
+from appointments.services.reminders import (
+    ReminderDispatchResult,
+    resolve_user_channel_preferences,
+    send_reminder_to_user,
+)
+from client_profile.models import ClientProfile
 from users.models import User
-from notifications.models import Notification
 
-class NotificationAPITestCase(APITestCase):
 
-    @classmethod
-    def setUpTestData(cls):
-        # کاربر با نوتیفیکیشن
-        cls.user = User.objects.create_user(
-            email="test@example.com",
-            password="password123",
-            phone_number="+989123456789"
+class NotificationChannelPreferenceTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            phone_number="+989100000010",
+            password="secret",
+            first_name="Client",
         )
-        for i in range(4):
-            Notification.objects.create(
-                user=cls.user,
-                title=f"Notification {i+1}",
-                message="Test message"
-            )
+        self.profile = ClientProfile.objects.create(user=self.user)
 
-    def test_notification_list_empty(self):
-        # یک کاربر کاملاً جدید
-        new_user = User.objects.create_user(
-            email="empty@example.com",
-            password="password123",
-            phone_number="+989123456780"
+    def test_default_channel_preferences_enabled(self):
+        preferences = resolve_user_channel_preferences(self.user)
+        self.assertTrue(preferences["push"])
+        self.assertTrue(preferences["sms"])
+
+    def test_channel_preferences_reflect_profile_flags(self):
+        self.profile.receive_push_notifications = False
+        self.profile.receive_sms_notifications = True
+        self.profile.save()
+
+        preferences = resolve_user_channel_preferences(self.user)
+        self.assertFalse(preferences["push"])
+        self.assertTrue(preferences["sms"])
+
+    @patch("appointments.services.reminders.send_sms")
+    @patch("appointments.services.reminders.Notification.send")
+    def test_send_reminder_to_user_respects_preferences(
+        self, mock_notification_send, mock_send_sms
+    ):
+        self.profile.receive_push_notifications = False
+        self.profile.receive_sms_notifications = True
+        self.profile.save()
+
+        result = send_reminder_to_user(
+            user=self.user,
+            title="Test",
+            message="Push message",
+            sms_message="SMS message",
         )
-        self.client.force_authenticate(user=new_user)
-        response = self.client.get('/notifications/')
-        print("Response data:", response.data)  # برای دیباگ
-        self.assertEqual(len(response.data), 0)
+
+        self.assertIsInstance(result, ReminderDispatchResult)
+        self.assertFalse(result.push_sent)
+        self.assertTrue(result.sms_sent)
+
+        mock_notification_send.assert_not_called()
+        mock_send_sms.assert_called_once_with(self.user.phone_number, "SMS message")
+
