@@ -2,6 +2,8 @@ from datetime import timedelta
 
 from django.core.exceptions import ValidationError
 from django.db import models, transaction
+from django.db.models.signals import post_delete, post_save, pre_save
+from django.dispatch import receiver
 from django.utils import timezone
 
 from client_profile.models import ClientProfile
@@ -154,3 +156,137 @@ class OnlineAppointment(BaseModel):
             send_sms(self.lawyer.user.phone_number, f"رزرو آنلاین با {self.client.user.get_full_name()} تایید شد. لینک: {self.google_meet_link}")
         except Exception as e:
             print(f"[Warning] Failed to send notification or SMS: {e}")
+
+
+class OnsiteSlot(BaseModel):
+    lawyer = models.ForeignKey(
+        LawyerProfile, on_delete=models.CASCADE, related_name="onsite_slots"
+    )
+    start_time = models.DateTimeField()
+    end_time = models.DateTimeField()
+    office_address = models.CharField(max_length=255, blank=True)
+    office_latitude = models.DecimalField(
+        max_digits=9, decimal_places=6, null=True, blank=True
+    )
+    office_longitude = models.DecimalField(
+        max_digits=9, decimal_places=6, null=True, blank=True
+    )
+    is_booked = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ["start_time"]
+        unique_together = ("lawyer", "start_time", "end_time")
+
+    def clean(self):
+        if self.end_time <= self.start_time:
+            raise ValidationError("End time must be after start time.")
+
+    def __str__(self):
+        return (
+            f"{self.lawyer.user.get_full_name()} | {self.start_time} - {self.end_time}"
+        )
+
+
+class OnsiteAppointment(BaseModel):
+    lawyer = models.ForeignKey(
+        LawyerProfile, on_delete=models.CASCADE, related_name="onsite_appointments"
+    )
+    client = models.ForeignKey(
+        ClientProfile, on_delete=models.CASCADE, related_name="onsite_appointments"
+    )
+    slot = models.ForeignKey(
+        OnsiteSlot, on_delete=models.CASCADE, related_name="appointments"
+    )
+    status = models.CharField(
+        max_length=10, choices=AppointmentStatus.choices, default=AppointmentStatus.PENDING
+    )
+    office_address = models.CharField(max_length=255, blank=True)
+    office_latitude = models.DecimalField(
+        max_digits=9, decimal_places=6, null=True, blank=True
+    )
+    office_longitude = models.DecimalField(
+        max_digits=9, decimal_places=6, null=True, blank=True
+    )
+    notes = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ["slot__start_time"]
+
+    def __str__(self):
+        return (
+            f"{self.client.user.get_full_name()} -> {self.lawyer.user.get_full_name()}"
+            f" | {self.slot.start_time} | {self.status}"
+        )
+
+
+@receiver(pre_save, sender=OnsiteSlot)
+def ensure_valid_onsite_slot(sender, instance, **kwargs):
+    """Prevent overlapping slots for the same lawyer and ensure office info."""
+
+    if instance.lawyer:
+        if not instance.office_address:
+            instance.office_address = instance.lawyer.office_address or ""
+        if instance.office_latitude is None:
+            instance.office_latitude = instance.lawyer.office_latitude
+        if instance.office_longitude is None:
+            instance.office_longitude = instance.lawyer.office_longitude
+
+    if instance.end_time <= instance.start_time:
+        raise ValidationError("End time must be after start time.")
+
+    overlapping = OnsiteSlot.objects.filter(
+        lawyer=instance.lawyer,
+        start_time__lt=instance.end_time,
+        end_time__gt=instance.start_time,
+    )
+    if instance.pk:
+        overlapping = overlapping.exclude(pk=instance.pk)
+    if overlapping.exists():
+        raise ValidationError("این بازه زمانی با اسلات دیگری تداخل دارد.")
+
+
+@receiver(pre_save, sender=OnsiteAppointment)
+def prevent_double_booking(sender, instance, **kwargs):
+    """Ensure a slot is not booked by more than one appointment."""
+
+    if not instance.slot_id:
+        return
+
+    active_qs = OnsiteAppointment.objects.filter(slot=instance.slot).exclude(
+        pk=instance.pk
+    )
+    active_qs = active_qs.exclude(status=AppointmentStatus.CANCELLED)
+    if active_qs.exists() and instance.status != AppointmentStatus.CANCELLED:
+        raise ValidationError("این اسلات قبلاً رزرو شده است.")
+
+    # Populate office info from slot if not provided
+    if not instance.office_address:
+        instance.office_address = instance.slot.office_address
+    if instance.office_latitude is None:
+        instance.office_latitude = instance.slot.office_latitude
+    if instance.office_longitude is None:
+        instance.office_longitude = instance.slot.office_longitude
+
+
+def _sync_slot_booking_state(slot):
+    """Helper to mark a slot as booked when active appointments exist."""
+
+    if not getattr(slot, "pk", None):
+        return
+
+    has_active = slot.appointments.exclude(
+        status=AppointmentStatus.CANCELLED
+    ).exists()
+    if slot.is_booked != has_active:
+        slot.is_booked = has_active
+        slot.save(update_fields=["is_booked"])
+
+
+@receiver(post_save, sender=OnsiteAppointment)
+def mark_slot_booked(sender, instance, **kwargs):
+    _sync_slot_booking_state(instance.slot)
+
+
+@receiver(post_delete, sender=OnsiteAppointment)
+def release_slot_on_delete(sender, instance, **kwargs):
+    _sync_slot_booking_state(instance.slot)

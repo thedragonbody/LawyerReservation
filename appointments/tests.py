@@ -1,11 +1,17 @@
 from datetime import timedelta
 from unittest.mock import patch
 
+from django.core.exceptions import ValidationError
 from django.test import TestCase
 from django.utils import timezone
 
 from appointments.integrations import CalendarSyncError
-from appointments.models import OnlineAppointment, OnlineSlot
+from appointments.models import (
+    OnlineAppointment,
+    OnlineSlot,
+    OnsiteAppointment,
+    OnsiteSlot,
+)
 from appointments.tasks import send_appointment_reminders_task
 from appointments.utils import create_meeting_link
 from client_profile.models import ClientProfile
@@ -156,6 +162,79 @@ class MeetingLinkGenerationTests(TestCase):
         self.assertTrue(link.startswith("https://meet.google.com/"))
         slug = link.split("/")[-1]
         self.assertEqual(slug.count("-"), 2)
+
+
+class OnsiteAppointmentSignalTests(TestCase):
+    def setUp(self):
+        self.client_user = User.objects.create_user(
+            phone_number="+989130000005",
+            password="secret",
+            first_name="Client",
+        )
+        self.client_profile = ClientProfile.objects.create(user=self.client_user)
+
+        self.lawyer_user = User.objects.create_user(
+            phone_number="+989130000006",
+            password="secret",
+            first_name="Lawyer",
+            last_name="Office",
+        )
+        self.lawyer_profile = LawyerProfile.objects.create(
+            user=self.lawyer_user,
+            office_address="Tehran, Valiasr St.",
+            office_latitude=35.123456,
+            office_longitude=51.123456,
+        )
+
+        start = timezone.now() + timedelta(hours=2)
+        end = start + timedelta(minutes=45)
+        self.slot = OnsiteSlot.objects.create(
+            lawyer=self.lawyer_profile,
+            start_time=start,
+            end_time=end,
+        )
+
+    def test_booking_marks_slot_as_booked(self):
+        appointment = OnsiteAppointment.objects.create(
+            lawyer=self.lawyer_profile,
+            client=self.client_profile,
+            slot=self.slot,
+        )
+        self.slot.refresh_from_db()
+        self.assertEqual(appointment.status, AppointmentStatus.PENDING)
+        self.assertTrue(self.slot.is_booked)
+
+    def test_cancelling_frees_slot(self):
+        appointment = OnsiteAppointment.objects.create(
+            lawyer=self.lawyer_profile,
+            client=self.client_profile,
+            slot=self.slot,
+        )
+        appointment.status = AppointmentStatus.CANCELLED
+        appointment.save(update_fields=["status"])
+        self.slot.refresh_from_db()
+        self.assertFalse(self.slot.is_booked)
+
+    def test_prevent_double_booking_same_slot(self):
+        OnsiteAppointment.objects.create(
+            lawyer=self.lawyer_profile,
+            client=self.client_profile,
+            slot=self.slot,
+        )
+        with self.assertRaises(ValidationError):
+            OnsiteAppointment.objects.create(
+                lawyer=self.lawyer_profile,
+                client=self.client_profile,
+                slot=self.slot,
+            )
+
+    def test_prevent_overlapping_slots(self):
+        with self.assertRaises(ValidationError):
+            OnsiteSlot.objects.create(
+                lawyer=self.lawyer_profile,
+                start_time=self.slot.start_time + timedelta(minutes=10),
+                end_time=self.slot.end_time + timedelta(minutes=10),
+            )
 
     @patch("appointments.utils.CalendarService")
     def test_google_provider_falls_back_to_temp_link(self, mock_calendar_service):
