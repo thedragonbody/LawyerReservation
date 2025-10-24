@@ -1,9 +1,13 @@
 from decimal import Decimal
 
 from django.urls import reverse
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APITestCase
 
+from appointments.models import OnlineAppointment, OnlineSlot
+from client_profile.models import ClientProfile
+from lawyer_profile.models import LawyerProfile
 from payments.models import Payment, Wallet
 from users.models import User
 
@@ -59,3 +63,57 @@ class WalletIntegrationTests(APITestCase):
         wallet.refresh_from_db()
         self.assertEqual(wallet.balance, Decimal("150000"))
         self.assertEqual(wallet.reserved_balance, Decimal("0"))
+
+
+class PaymentCreationTests(APITestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            phone_number="09120000001", password="pass1234", is_active=True
+        )
+        self.client.force_authenticate(self.user)
+
+        self.client_profile = ClientProfile.objects.create(user=self.user)
+
+        lawyer_user = User.objects.create_user(
+            phone_number="09120000002", password="pass1234", is_active=True
+        )
+        self.lawyer_profile = LawyerProfile.objects.create(user=lawyer_user)
+
+        start_time = timezone.now() + timezone.timedelta(days=1)
+        end_time = start_time + timezone.timedelta(minutes=30)
+        self.slot = OnlineSlot.objects.create(
+            lawyer=self.lawyer_profile,
+            start_time=start_time,
+            end_time=end_time,
+            price=Decimal("500000"),
+        )
+
+        self.appointment = OnlineAppointment.objects.create(
+            lawyer=self.lawyer_profile,
+            client=self.client_profile,
+            slot=self.slot,
+        )
+
+        Payment.objects.create(
+            user=self.user,
+            appointment=self.appointment,
+            amount=Decimal("500000"),
+            status=Payment.Status.COMPLETED,
+        )
+
+    def test_duplicate_payment_request_returns_error(self):
+        url = reverse("payments:payment-create")
+        response = self.client.post(
+            url,
+            {"appointment_id": self.appointment.id, "amount": "500000"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.data["detail"], "Payment already completed for this appointment."
+        )
+        self.assertEqual(
+            Payment.objects.filter(appointment=self.appointment).count(),
+            1,
+        )
