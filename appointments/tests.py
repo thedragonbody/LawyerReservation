@@ -447,6 +447,88 @@ class OnlineAppointmentListViewTests(TestCase):
             password="secret",
             first_name="Client",
             last_name="Tester",
+class OnlineSlotListViewTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+
+        self.lawyer_user = User.objects.create_user(
+            phone_number="+989160000009",
+            password="secret",
+            first_name="Lawyer",
+        )
+        self.lawyer_profile = LawyerProfile.objects.create(user=self.lawyer_user)
+
+        now = timezone.now()
+        start_today = now + timedelta(days=1, hours=1)
+        end_today = start_today + timedelta(minutes=30)
+        self.slot_today = OnlineSlot.objects.create(
+            lawyer=self.lawyer_profile,
+            start_time=start_today,
+            end_time=end_today,
+            price=300000,
+        )
+
+        start_tomorrow = now + timedelta(days=2)
+        end_tomorrow = start_tomorrow + timedelta(minutes=30)
+        self.slot_tomorrow = OnlineSlot.objects.create(
+            lawyer=self.lawyer_profile,
+            start_time=start_tomorrow,
+            end_time=end_tomorrow,
+            price=600000,
+        )
+
+        # Past slot should never be returned
+        past_start = now - timedelta(days=1)
+        OnlineSlot.objects.create(
+            lawyer=self.lawyer_profile,
+            start_time=past_start,
+            end_time=past_start + timedelta(minutes=30),
+        )
+
+        other_lawyer = LawyerProfile.objects.create(
+            user=User.objects.create_user(
+                phone_number="+989170000010",
+                password="secret",
+                first_name="Other",
+            )
+        )
+        future_start = now + timedelta(days=1)
+        OnlineSlot.objects.create(
+            lawyer=other_lawyer,
+            start_time=future_start,
+            end_time=future_start + timedelta(minutes=30),
+            price=400000,
+        )
+
+        self.url = reverse("appointments:online-slot-list", args=[self.lawyer_profile.pk])
+
+    def test_filter_by_date_returns_matching_slots(self):
+        date_str = self.slot_today.start_time.date().isoformat()
+        response = self.client.get(self.url, {"date": date_str})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("results", response.data)
+        self.assertEqual(len(response.data["results"]), 1)
+        self.assertEqual(response.data["results"][0]["id"], self.slot_today.id)
+
+    def test_filter_by_price_range(self):
+        response = self.client.get(self.url, {"price_min": "400000", "price_max": "700000"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["count"], 1)
+        self.assertEqual(response.data["results"][0]["id"], self.slot_tomorrow.id)
+
+    def test_invalid_date_returns_error(self):
+        response = self.client.get(self.url, {"date": "2024-13-40"})
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("date", response.data)
+
+    def test_invalid_price_range_returns_error(self):
+        response = self.client.get(self.url, {"price_min": "800000", "price_max": "200000"})
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("price_range", response.data)
 class OnlineAppointmentSerializerTests(TestCase):
     def setUp(self):
         self.client_user = User.objects.create_user(

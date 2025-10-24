@@ -1,6 +1,12 @@
 import logging
 import uuid
-from typing import TYPE_CHECKING, Optional
+from datetime import datetime
+from decimal import Decimal, InvalidOperation
+from typing import TYPE_CHECKING, Mapping, Optional
+
+from django.db.models import QuerySet
+
+from rest_framework.exceptions import ValidationError
 
 from .integrations import CalendarService, CalendarSyncError
 
@@ -83,3 +89,57 @@ def create_meeting_link(
 
     logger.warning("Unknown meeting provider '%s'. Falling back to temporary Google link.", provider)
     return _temporary_google_link(_appointment_identifier(appointment))
+
+
+def filter_online_slots(queryset: QuerySet, params: Mapping[str, str]) -> QuerySet:
+    """Apply common OnlineSlot filters based on query parameters.
+
+    Supported filters:
+        - date: ISO format YYYY-MM-DD (filters by start_time__date)
+        - price_min / price_max: positive decimal values
+    """
+
+    errors = {}
+
+    date_value = None
+    date_str = params.get("date")
+    if date_str:
+        try:
+            date_value = datetime.strptime(date_str, "%Y-%m-%d").date()
+        except ValueError:
+            errors["date"] = "فرمت تاریخ معتبر نیست. از قالب YYYY-MM-DD استفاده کنید."
+
+    min_value = None
+    price_min = params.get("price_min")
+    if price_min not in (None, ""):
+        try:
+            min_value = Decimal(price_min)
+            if min_value < 0:
+                raise InvalidOperation
+        except (InvalidOperation, ValueError):
+            errors["price_min"] = "حداقل قیمت باید یک عدد معتبر و غیرمنفی باشد."
+
+    max_value = None
+    price_max = params.get("price_max")
+    if price_max not in (None, ""):
+        try:
+            max_value = Decimal(price_max)
+            if max_value < 0:
+                raise InvalidOperation
+        except (InvalidOperation, ValueError):
+            errors["price_max"] = "حداکثر قیمت باید یک عدد معتبر و غیرمنفی باشد."
+
+    if min_value is not None and max_value is not None and min_value > max_value:
+        errors["price_range"] = "حداقل قیمت نمی‌تواند بیشتر از حداکثر قیمت باشد."
+
+    if errors:
+        raise ValidationError(errors)
+
+    if date_value:
+        queryset = queryset.filter(start_time__date=date_value)
+    if min_value is not None:
+        queryset = queryset.filter(price__gte=min_value)
+    if max_value is not None:
+        queryset = queryset.filter(price__lte=max_value)
+
+    return queryset
