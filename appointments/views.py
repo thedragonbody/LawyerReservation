@@ -89,6 +89,7 @@ class OnlineAppointmentListView(generics.ListAPIView):
         client_profile = getattr(self.request.user, 'client_profile', None)
         return (
             OnlineAppointment.objects.select_related('slot', 'lawyer__user')
+            OnlineAppointment.objects.select_related("slot", "lawyer__user")
             .filter(client=client_profile)
             .order_by('-slot__start_time')
         )
