@@ -1,7 +1,9 @@
 from decimal import Decimal
 
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import transaction
+from django.urls import reverse
 from rest_framework import generics, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -51,6 +53,8 @@ class CreatePaymentView(generics.CreateAPIView):
         except Exception:
             return Response({"detail": "Invalid amount format."}, status=status.HTTP_400_BAD_REQUEST)
 
+        provider_response = None
+
         with transaction.atomic():
             payment = Payment.objects.create(
                 user=request.user,
@@ -66,11 +70,43 @@ class CreatePaymentView(generics.CreateAPIView):
                     transaction.set_rollback(True)
                     return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
 
-        return Response({
+            if payment_method == Payment.Method.IDPAY:
+                callback_url = getattr(settings, "IDPAY_CALLBACK_URL", None)
+                if not callback_url:
+                    callback_url = request.build_absolute_uri(reverse("payments:payment-verify"))
+
+                order_id = str(payment.id)
+                multiplier = getattr(settings, "PAYMENT_AMOUNT_MULTIPLIER", 1)
+                amount_to_pay = int(payment.amount * multiplier)
+
+                try:
+                    provider_response = payment_utils.create_payment_request(
+                        order_id=order_id,
+                        amount=amount_to_pay,
+                        callback=callback_url,
+                    )
+                except Exception:
+                    transaction.set_rollback(True)
+                    return Response(
+                        {"detail": "Failed to create payment request."},
+                        status=status.HTTP_502_BAD_GATEWAY,
+                    )
+
+                payment.provider_data = provider_response
+                payment.save(update_fields=["provider_data", "updated_at"])
+
+        response_data = {
             "payment_id": payment.id,
             "status": payment.status,
-            "simulate_payment_url": f"/api/payments/verify/?payment_id={payment.id}",
-        }, status=status.HTTP_201_CREATED)
+        }
+
+        if payment_method == Payment.Method.WALLET:
+            response_data["simulate_payment_url"] = f"/api/payments/verify/?payment_id={payment.id}"
+
+        if provider_response:
+            response_data["payment_url"] = provider_response.get("link")
+
+        return Response(response_data, status=status.HTTP_201_CREATED)
 
 
 class VerifyPaymentView(generics.GenericAPIView):
