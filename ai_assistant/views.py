@@ -165,12 +165,10 @@ class CreateSubscriptionPaymentView(APIView):
 
         # ۳. ایجاد درخواست در درگاه (IDPay)
         try:
-            callback_url = "http://localhost:3000/dashboard/ai/payment-verify/" 
-            
             provider_data = create_payment_request(
                 order_id=str(payment.id),
-                amount=int(amount_to_pay), 
-                callback=callback_url,
+                amount=int(amount_to_pay),
+                callback=settings.IDPAY_CALLBACK_URL,
                 phone=user.phone_number,
                 desc=f"خرید اشتراک {plan.name}"
             )

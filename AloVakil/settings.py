@@ -27,6 +27,10 @@ DEBUG = env.bool('DEBUG', default=False)
 IDPAY_API_KEY = env.str("IDPAY_API_KEY", default=None)
 IDPAY_SANDBOX = env.bool("IDPAY_SANDBOX", default=True)
 IDPAY_API_URL = env.str("IDPAY_API_URL", default="https://api.idpay.ir/v1.1")
+IDPAY_CALLBACK_URL = env.str(
+    "IDPAY_CALLBACK_URL",
+    default="http://localhost:8000/api/payments/idpay/callback/",
+)
 PAYMENT_AMOUNT_MULTIPLIER = env.int("PAYMENT_AMOUNT_MULTIPLIER", default=1)
 
 # SMS
