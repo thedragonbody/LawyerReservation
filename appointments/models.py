@@ -94,12 +94,13 @@ class OnlineAppointment(BaseModel):
     # -----------------------------
     # Cancel / Reschedule
     # -----------------------------
-    def cancel(self, user=None, calendar_service=None, **kwargs):
-        # فقط کاربر می‌تواند لغو کند و تا 24 ساعت قبل
-        if user and user != self.client.user:
-            raise ValidationError("فقط کاربر می‌تواند لغو کند.")
-        if self.slot.start_time - timezone.now() < timedelta(hours=24):
-            raise ValidationError("لغو رزرو تنها تا 24 ساعت قبل امکان‌پذیر است.")
+    def cancel(self, user=None, calendar_service=None, *, force=False, send_notifications=False):
+        # فقط کاربر می‌تواند لغو کند و تا 24 ساعت قبل مگر اینکه force فعال باشد
+        if not force:
+            if user and user != self.client.user:
+                raise ValidationError("فقط کاربر می‌تواند لغو کند.")
+            if self.slot.start_time - timezone.now() < timedelta(hours=24):
+                raise ValidationError("لغو رزرو تنها تا 24 ساعت قبل امکان‌پذیر است.")
         if self.status in [AppointmentStatus.CANCELLED, AppointmentStatus.COMPLETED]:
             return CalendarSyncResult(success=True, event_id=self.calendar_event_id)
 
@@ -123,7 +124,57 @@ class OnlineAppointment(BaseModel):
                 self.save(update_fields=["calendar_event_id"])
                 sync_result = CalendarSyncResult(success=True, event_id=None)
 
+        if send_notifications:
+            self._send_cancellation_notifications()
+
         return sync_result
+
+    def cancel_by_system(self, calendar_service=None):
+        return self.cancel(
+            calendar_service=calendar_service,
+            force=True,
+            send_notifications=True,
+        )
+
+    def _send_cancellation_notifications(self):
+        client_user = self.client.user
+        lawyer_user = self.lawyer.user
+        appointment_time = timezone.localtime(self.slot.start_time)
+        appointment_time_str = appointment_time.strftime("%Y-%m-%d %H:%M")
+        client_name = client_user.get_full_name() or client_user.phone_number
+        lawyer_name = lawyer_user.get_full_name() or lawyer_user.phone_number
+
+        try:
+            Notification.objects.create(
+                user=client_user,
+                appointment=self,
+                title="رزرو لغو شد",
+                message=(
+                    f"رزروی که برای {appointment_time_str} با {lawyer_name} داشتید، لغو شد."
+                ),
+            )
+            Notification.objects.create(
+                user=lawyer_user,
+                appointment=self,
+                title="رزرو کاربر لغو شد",
+                message=(
+                    f"{client_name} رزروی که داشت را برای {appointment_time_str} لغو کرد."
+                ),
+            )
+        except Exception:
+            pass
+
+        try:
+            send_sms(
+                client_user.phone_number,
+                f"رزرو شما برای {appointment_time_str} لغو شد.",
+            )
+            send_sms(
+                lawyer_user.phone_number,
+                f"رزرو کاربر {client_name} برای {appointment_time_str} لغو شد.",
+            )
+        except Exception:
+            pass
 
     # -----------------------------
     # ایجاد لینک Google Meet
