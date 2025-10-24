@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="fa">
+<head>
+    <meta charset="utf-8">
+    <title>نتیجه اتصال تقویم</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body {
+            font-family: sans-serif;
+            background: #0f172a;
+            color: #f8fafc;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+        .panel {
+            background: rgba(15, 23, 42, 0.85);
+            border-radius: 20px;
+            padding: 3rem;
+            width: min(90vw, 540px);
+            text-align: center;
+            box-shadow: 0 30px 60px rgba(15, 23, 42, 0.6);
+        }
+        h1 {
+            font-size: 1.8rem;
+            margin-bottom: 1rem;
+        }
+        p {
+            font-size: 1rem;
+            line-height: 1.7;
+            color: #cbd5f5;
+        }
+        .success {
+            color: #34d399;
+        }
+        .error {
+            color: #f87171;
+        }
+        button {
+            margin-top: 2rem;
+            padding: 0.75rem 1.5rem;
+            border-radius: 999px;
+            border: none;
+            font-size: 1rem;
+            cursor: pointer;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            color: #fff;
+            box-shadow: 0 12px 30px rgba(99, 102, 241, 0.3);
+        }
+        button:hover {
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body>
+<div class="panel">
+    <h1 class="{% if success %}success{% else %}error{% endif %}">
+        {% if success %}
+            اتصال با موفقیت انجام شد
+        {% else %}
+            خطا در اتصال به تقویم
+        {% endif %}
+    </h1>
+    <p>{{ detail }}</p>
+    <p>این پنجره را می‌توانید ببندید و به برنامه بازگردید.</p>
+    <button type="button" onclick="window.close();">بستن</button>
+</div>
+<script>
+(function () {
+    if (window.opener) {
+        window.opener.postMessage(
+            {
+                provider: '{{ provider }}',
+                success: {{ success|yesno:"true,false" }},
+                detail: '{{ detail }}'
+            },
+            '*'
+        );
+    }
+})();
+</script>
+</body>
+</html>

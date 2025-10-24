@@ -31,6 +31,15 @@ PAYMENT_AMOUNT_MULTIPLIER = env.int("PAYMENT_AMOUNT_MULTIPLIER", default=1)
 # SMS
 SMS_API_KEY = env.str("SMS_API_KEY", default=None)
 
+# OAuth configuration
+GOOGLE_OAUTH_CLIENT_ID = env.str("GOOGLE_OAUTH_CLIENT_ID", default="test-google-client-id")
+GOOGLE_OAUTH_CLIENT_SECRET = env.str("GOOGLE_OAUTH_CLIENT_SECRET", default="test-google-client-secret")
+GOOGLE_OAUTH_REDIRECT_URI = env.str(
+    "GOOGLE_OAUTH_REDIRECT_URI",
+    default="http://localhost:8000/appointments/calendar/oauth/google/callback/",
+)
+CALENDAR_OAUTH_STATE_TTL = env.int("CALENDAR_OAUTH_STATE_TTL", default=300)
+
 # DB example
 DATABASES = {
     'default': {
