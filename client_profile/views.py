@@ -2,14 +2,14 @@ from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 from .models import ClientProfile, Device
-from .serializers import ClientProfileSerializer, SendOTPSerializer, VerifyOTPSerializer, DeviceSerializer
+from .serializers import SendOTPSerializer, VerifyOTPSerializer, DeviceSerializer
 from rest_framework.views import APIView
 from django.utils import timezone
 from datetime import timedelta
-from notifications.utils import send_sms_task_or_sync  # later define helper
+from users.utils import send_sms_task_or_sync
 from django.db import transaction
 from users.models import User
-from rest_framework.throttling import UserRateThrottle, AnonRateThrottle
+from rest_framework.throttling import AnonRateThrottle
 
 # simple rate limit classes (could use redis-backed throttles)
 class OTPThrottle(AnonRateThrottle):
@@ -35,11 +35,7 @@ class SendOTPView(APIView):
         code = client_profile.generate_phone_code()
 
         # send sms via celery or sync
-        try:
-            send_sms_task_or_sync.delay(phone, f"Your verification code: {code}")
-        except Exception:
-            # fallback sync
-            send_sms_task_or_sync(phone, f"Your verification code: {code}")
+        send_sms_task_or_sync(phone, f"Your verification code: {code}")
 
         return Response({"detail":"OTP sent."}, status=status.HTTP_200_OK)
 
@@ -78,13 +74,42 @@ class ToggleFavoriteLawyerView(APIView):
     def post(self, request, lawyer_id):
         client_profile = getattr(request.user, 'client_profile', None)
         if not client_profile:
-            return Response({"detail":"Only clients."}, status=status.HTTP_403_FORBIDDEN)
-        lawyer = get_object_or_404(__import__('lawyer_profile').lawyer_profile.models.LawyerProfile, pk=lawyer_id)
-        if lawyer in client_profile.favorites.all():
+            return Response({"detail": "Only clients."}, status=status.HTTP_403_FORBIDDEN)
+
+        LawyerProfile = __import__('lawyer_profile').lawyer_profile.models.LawyerProfile
+        lawyer = get_object_or_404(LawyerProfile, pk=lawyer_id)
+
+        if client_profile.favorites.filter(pk=lawyer.pk).exists():
             client_profile.favorites.remove(lawyer)
-            return Response({"favorited": False})
+            favorited = False
         else:
             client_profile.favorites.add(lawyer)
-            return Response({"favorited": True})
+            favorited = True
+
+        return Response({"favorited": favorited})
+
+
+class DeviceListView(generics.ListAPIView):
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = DeviceSerializer
+
+    def get_queryset(self):
+        client_profile = getattr(self.request.user, 'client_profile', None)
+        if not client_profile:
+            return Device.objects.none()
+        return client_profile.devices.order_by('-last_seen', '-created_at')
+
+
+class RevokeDeviceView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, pk):
+        client_profile = getattr(request.user, 'client_profile', None)
+        if not client_profile:
+            return Response({"detail": "Only clients."}, status=status.HTTP_403_FORBIDDEN)
+
+        device = get_object_or_404(Device, pk=pk, client=client_profile)
+        device.mark_revoked()
+        return Response({"detail": "Device revoked."}, status=status.HTTP_200_OK)
 
 

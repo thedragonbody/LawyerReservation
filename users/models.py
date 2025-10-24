@@ -54,9 +54,10 @@ class User(AbstractBaseUser, PermissionsMixin):
 # ================= PasswordResetCode =================
 class PasswordResetCode(models.Model):
     PURPOSE_CHOICES = [
-        ('signup', 'Signup'),
-        ('reset', 'Password Reset'),
-        ('phone_verify', 'Phone Verification'),
+        ("login", "Passwordless Login"),
+        ("signup", "Signup"),
+        ("reset", "Password Reset"),
+        ("phone_verify", "Phone Verification"),
     ]
 
     phone_number = models.CharField(max_length=15, db_index=True)
