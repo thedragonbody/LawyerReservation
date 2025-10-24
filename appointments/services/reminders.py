@@ -10,7 +10,7 @@ from django.utils import timezone
 from appointments.models import OnlineAppointment
 from common.choices import AppointmentStatus
 from notifications.models import Notification
-from notifications.utils import send_sms
+from common.utils import send_sms
 
 
 @dataclass

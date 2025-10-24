@@ -57,3 +57,21 @@ class NotificationChannelPreferenceTests(TestCase):
         mock_notification_send.assert_not_called()
         mock_send_sms.assert_called_once_with(self.user.phone_number, "SMS message")
 
+    @patch("appointments.services.reminders.send_sms")
+    @patch("appointments.services.reminders.Notification.send")
+    def test_send_reminder_to_user_uses_enabled_channels(
+        self, mock_notification_send, mock_send_sms
+    ):
+        result = send_reminder_to_user(
+            user=self.user,
+            title="Hello",
+            message="Push body",
+            sms_message="SMS body",
+        )
+
+        self.assertTrue(result.push_sent)
+        self.assertTrue(result.sms_sent)
+
+        mock_notification_send.assert_called_once()
+        mock_send_sms.assert_called_once_with(self.user.phone_number, "SMS body")
+
