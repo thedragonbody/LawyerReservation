@@ -1,9 +1,12 @@
 """Service helpers for sending appointment reminders."""
 
+import logging
+import os
 from dataclasses import dataclass
 from datetime import timedelta
-from typing import Dict, Iterable, Optional
+from typing import Any, Dict, Iterable, Optional
 
+from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 
@@ -12,13 +15,19 @@ from common.choices import AppointmentStatus
 from notifications.models import Notification
 from common.utils import send_sms
 
+logger = logging.getLogger(__name__)
+
 
 @dataclass
 class ReminderDispatchResult:
     """Represents the channels that were used to notify a user."""
 
+    push_attempted: bool = False
     push_sent: bool = False
+    push_error: Optional[Exception] = None
+    sms_attempted: bool = False
     sms_sent: bool = False
+    sms_error: Optional[Exception] = None
 
 
 def resolve_user_channel_preferences(user) -> Dict[str, bool]:
@@ -51,19 +60,55 @@ def send_reminder_to_user(
     result = ReminderDispatchResult()
 
     if preferences.get("push", True):
-        Notification.send(
-            user=user,
-            title=title,
-            message=message,
-            type_=Notification.Type.APPOINTMENT_REMINDER,
-        )
-        result.push_sent = True
+        result.push_attempted = True
+        try:
+            Notification.send(
+                user=user,
+                title=title,
+                message=message,
+                type_=Notification.Type.APPOINTMENT_REMINDER,
+            )
+            result.push_sent = True
+        except Exception as exc:  # pragma: no cover - defensive logging path
+            result.push_error = exc
 
     if preferences.get("sms", True) and sms_message and user.phone_number:
-        send_sms(user.phone_number, sms_message)
-        result.sms_sent = True
+        result.sms_attempted = True
+        try:
+            send_sms(user.phone_number, sms_message)
+            result.sms_sent = True
+        except Exception as exc:  # pragma: no cover - defensive logging path
+            result.sms_error = exc
 
     return result
+
+
+def _resolve_default_window() -> timedelta:
+    """Determine the default reminder window from settings or the environment."""
+
+    configured = getattr(settings, "APPOINTMENT_REMINDER_WINDOW", None)
+    if isinstance(configured, timedelta):
+        return configured
+    if configured not in (None, ""):
+        try:
+            return timedelta(minutes=float(configured))
+        except (TypeError, ValueError):
+            logger.warning(
+                "Invalid APPOINTMENT_REMINDER_WINDOW %r in settings; using fallback.",
+                configured,
+            )
+
+    env_value = os.getenv("APPOINTMENT_REMINDER_WINDOW")
+    if env_value not in (None, ""):
+        try:
+            return timedelta(minutes=float(env_value))
+        except (TypeError, ValueError):
+            logger.warning(
+                "Invalid APPOINTMENT_REMINDER_WINDOW %r in environment; using fallback.",
+                env_value,
+            )
+
+    return timedelta(hours=1)
 
 
 def _format_slot_time(appointment: OnlineAppointment) -> str:
@@ -88,10 +133,22 @@ def _get_upcoming_online_appointments(
     )
 
 
-def dispatch_upcoming_reminders(*, window: timedelta = timedelta(hours=1)) -> int:
+def dispatch_upcoming_reminders(*, window: Optional[timedelta] = None) -> Dict[str, Any]:
     """Send reminders for confirmed appointments whose slot starts soon."""
 
-    processed = 0
+    if window is None:
+        window = _resolve_default_window()
+
+    summary = {
+        "processed_appointments": 0,
+        "notifications": {
+            "push": {"sent": 0, "failed": 0},
+            "sms": {"sent": 0, "failed": 0},
+        },
+        "errors": [],
+        "window": window,
+    }
+
     appointments = list(_get_upcoming_online_appointments(window=window))
 
     for appointment in appointments:
@@ -107,27 +164,99 @@ def dispatch_upcoming_reminders(*, window: timedelta = timedelta(hours=1)) -> in
             f"جلسه شما با {client_user.get_full_name()} در {start_time_display} برگزار می‌شود."
         )
 
-        send_reminder_to_user(
+        client_result = send_reminder_to_user(
             user=client_user,
             title="یادآوری جلسه آنلاین 🎥",
             message=client_message,
             sms_message=f"یادآوری: جلسه آنلاین شما در {start_time_display} است 🎥",
         )
 
-        send_reminder_to_user(
+        lawyer_result = send_reminder_to_user(
             user=lawyer_user,
             title="یادآوری جلسه نزدیک ⏰",
             message=lawyer_message,
             sms_message=f"یادآوری: جلسه آنلاین در {start_time_display} برگزار می‌شود.",
         )
 
+        for user, result, role in (
+            (client_user, client_result, "client"),
+            (lawyer_user, lawyer_result, "lawyer"),
+        ):
+            if result.push_attempted:
+                if result.push_sent:
+                    summary["notifications"]["push"]["sent"] += 1
+                    logger.info(
+                        "Sent push reminder for appointment %s to %s user %s",
+                        appointment.id,
+                        role,
+                        user.id,
+                    )
+                else:
+                    summary["notifications"]["push"]["failed"] += 1
+                    summary["errors"].append(
+                        {
+                            "appointment_id": appointment.id,
+                            "user_id": user.id,
+                            "channel": "push",
+                            "role": role,
+                            "error": str(result.push_error),
+                        }
+                    )
+                    if result.push_error is not None:
+                        logger.error(
+                            "Failed to send push reminder for appointment %s to %s user %s: %s",
+                            appointment.id,
+                            role,
+                            user.id,
+                            result.push_error,
+                            exc_info=(
+                                type(result.push_error),
+                                result.push_error,
+                                result.push_error.__traceback__,
+                            ),
+                        )
+
+            if result.sms_attempted:
+                if result.sms_sent:
+                    summary["notifications"]["sms"]["sent"] += 1
+                    logger.info(
+                        "Sent SMS reminder for appointment %s to %s user %s",
+                        appointment.id,
+                        role,
+                        user.id,
+                    )
+                else:
+                    summary["notifications"]["sms"]["failed"] += 1
+                    summary["errors"].append(
+                        {
+                            "appointment_id": appointment.id,
+                            "user_id": user.id,
+                            "channel": "sms",
+                            "role": role,
+                            "error": str(result.sms_error),
+                        }
+                    )
+                    if result.sms_error is not None:
+                        logger.error(
+                            "Failed to send SMS reminder for appointment %s to %s user %s: %s",
+                            appointment.id,
+                            role,
+                            user.id,
+                            result.sms_error,
+                            exc_info=(
+                                type(result.sms_error),
+                                result.sms_error,
+                                result.sms_error.__traceback__,
+                            ),
+                        )
+
         with transaction.atomic():
             appointment.is_reminder_sent = True
             appointment.save(update_fields=["is_reminder_sent"])
 
-        processed += 1
+        summary["processed_appointments"] += 1
 
-    return processed
+    return summary
 
 
 __all__ = [
