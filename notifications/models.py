@@ -10,6 +10,8 @@ class Notification(models.Model):
         APPOINTMENT_CONFIRMED = "appointment_confirmed", "Appointment Confirmed"
         APPOINTMENT_REMINDER = "appointment_reminder", "Appointment Reminder"
         PAYMENT_SUCCESS = "payment_success", "Payment Success"
+        INPERSON_PAYMENT_SUCCESS = "inperson_payment_success", "In-person Payment Success"
+        INPERSON_PAYMENT_REFUNDED = "inperson_payment_refunded", "In-person Payment Refunded"
 
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="notifications")
     title = models.CharField(max_length=200)

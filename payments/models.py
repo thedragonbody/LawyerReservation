@@ -109,9 +109,23 @@ class Payment(models.Model):
         blank=True,
         related_name="payments",
     )
+    inperson_appointment = models.ForeignKey(
+        "appointments.InPersonAppointment",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="payments",
+    )
 
     def __str__(self):
-        related = "Appointment" if self.appointment else "Subscription"
+        if self.appointment:
+            related = "OnlineAppointment"
+        elif self.inperson_appointment:
+            related = "InPersonAppointment"
+        elif self.subscription:
+            related = "Subscription"
+        else:
+            related = "General"
         return f"Payment {self.id} | {self.user.email} | {self.amount} | {related} | {self.status}"
 
     def mark_completed(self, provider_data=None):
@@ -124,9 +138,11 @@ class Payment(models.Model):
             capture_wallet_payment(self)
 
         self.status = self.Status.COMPLETED
-        if provider_data:
+        update_fields = ["status", "updated_at"]
+        if provider_data is not None:
             self.provider_data = provider_data
-        self.save(update_fields=["status", "provider_data", "updated_at"])
+            update_fields.append("provider_data")
+        self.save(update_fields=update_fields)
 
         # --- فعالسازی appointment
         if self.appointment:
@@ -134,10 +150,13 @@ class Payment(models.Model):
             # یا اینکه متد confirm در خود مدل appointment تعریف شده
             self.appointment.confirm()
 
+        if self.inperson_appointment:
+            self.inperson_appointment.mark_payment_completed()
+
         # --- فعالسازی subscription
         if self.subscription:
             self.subscription.active = True
-            
+
             # 💡 رفع باگ: duration_days از 'plan' خوانده شود نه خود 'subscription'
             duration = 30 # پیش‌فرض
             if self.subscription.plan:
@@ -170,6 +189,8 @@ class Payment(models.Model):
         if self.appointment:
             # TODO: align with appointment cancellation workflow
             pass
+        if self.inperson_appointment:
+            self.inperson_appointment.mark_payment_refunded()
         if self.subscription:
             self.subscription.active = False
             self.subscription.save(update_fields=["active"])
