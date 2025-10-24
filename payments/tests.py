@@ -2,7 +2,8 @@ from decimal import Decimal
 
 from unittest.mock import patch
 
-from django.test import TestCase
+from django.conf import settings
+from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 from rest_framework import status
@@ -15,6 +16,61 @@ from lawyer_profile.models import LawyerProfile
 from notifications.models import Notification
 from payments.models import Payment, Wallet
 from users.models import User
+
+
+class VerifyPaymentViewTests(APITestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            phone_number="09120000099", password="pass1234", is_active=True
+        )
+        self.client.force_authenticate(self.user)
+        self.payment = Payment.objects.create(
+            user=self.user,
+            amount=Decimal("100000"),
+            payment_method=Payment.Method.IDPAY,
+        )
+        self.url = reverse("payments:payment-verify")
+
+    @patch("payments.views.payment_utils.verify_payment_request")
+    def test_successful_verification_marks_payment_completed(self, mock_verify):
+        mock_verify.return_value = {
+            "status": 100,
+            "track_id": "track-1",
+            "order_id": str(self.payment.id),
+        }
+
+        payload = {
+            "id": "provider-1",
+            "order_id": str(self.payment.id),
+            "status": 100,
+        }
+
+        response = self.client.post(self.url, payload, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        mock_verify.assert_called_once_with("provider-1")
+
+        self.payment.refresh_from_db()
+        self.assertEqual(self.payment.status, Payment.Status.COMPLETED)
+        self.assertEqual(self.payment.transaction_id, "provider-1")
+        self.assertEqual(self.payment.provider_data, mock_verify.return_value)
+
+    @patch("payments.views.payment_utils.verify_payment_request")
+    def test_unsuccessful_status_marks_payment_failed(self, mock_verify):
+        payload = {
+            "id": "provider-1",
+            "order_id": str(self.payment.id),
+            "status": 10,
+        }
+
+        response = self.client.post(self.url, payload, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        mock_verify.assert_not_called()
+
+        self.payment.refresh_from_db()
+        self.assertEqual(self.payment.status, Payment.Status.FAILED)
+        self.assertIsNone(self.payment.provider_data)
 
 
 class WalletIntegrationTests(APITestCase):
@@ -99,7 +155,7 @@ class PaymentCreationTests(APITestCase):
             slot=self.slot,
         )
 
-        Payment.objects.create(
+        self.completed_payment = Payment.objects.create(
             user=self.user,
             appointment=self.appointment,
             amount=Decimal("500000"),
@@ -122,6 +178,55 @@ class PaymentCreationTests(APITestCase):
             Payment.objects.filter(appointment=self.appointment).count(),
             1,
         )
+
+    @override_settings(IDPAY_CALLBACK_URL="https://example.com/idpay/callback")
+    @patch("payments.views.payment_utils.create_payment_request")
+    def test_idpay_payment_request_stores_provider_data(self, mock_create_payment_request):
+        provider_payload = {
+            "id": "provider-id",
+            "link": "https://idpay.ir/pay/abc123",
+            "track_id": "track-456",
+        }
+        mock_create_payment_request.return_value = provider_payload
+
+        start_time = timezone.now() + timezone.timedelta(days=3)
+        end_time = start_time + timezone.timedelta(minutes=30)
+        slot = OnlineSlot.objects.create(
+            lawyer=self.lawyer_profile,
+            start_time=start_time,
+            end_time=end_time,
+            price=Decimal("600000"),
+        )
+        appointment = OnlineAppointment.objects.create(
+            lawyer=self.lawyer_profile,
+            client=self.client_profile,
+            slot=slot,
+        )
+
+        url = reverse("payments:payment-create")
+        response = self.client.post(
+            url,
+            {
+                "appointment_id": appointment.id,
+                "amount": "600000",
+                "payment_method": Payment.Method.IDPAY,
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        payment = Payment.objects.get(appointment=appointment)
+        self.assertEqual(payment.provider_data, provider_payload)
+        self.assertEqual(response.data.get("payment_url"), provider_payload["link"])
+        self.assertNotIn("simulate_payment_url", response.data)
+
+        mock_create_payment_request.assert_called_once()
+        called_kwargs = mock_create_payment_request.call_args.kwargs
+        self.assertEqual(called_kwargs["order_id"], str(payment.id))
+        self.assertEqual(called_kwargs["callback"], "https://example.com/idpay/callback")
+        expected_amount = int(payment.amount * settings.PAYMENT_AMOUNT_MULTIPLIER)
+        self.assertEqual(called_kwargs["amount"], expected_amount)
 
 
 class InPersonPaymentFlowTests(TestCase):

@@ -31,6 +31,7 @@ IDPAY_CALLBACK_URL = env.str(
     "IDPAY_CALLBACK_URL",
     default="http://localhost:8000/api/payments/idpay/callback/",
 )
+IDPAY_CALLBACK_URL = env.str("IDPAY_CALLBACK_URL", default=None)
 PAYMENT_AMOUNT_MULTIPLIER = env.int("PAYMENT_AMOUNT_MULTIPLIER", default=1)
 
 # SMS

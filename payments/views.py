@@ -1,7 +1,9 @@
 from decimal import Decimal
 
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import transaction
+from django.urls import reverse
 from rest_framework import generics, status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -100,6 +102,8 @@ class CreatePaymentView(generics.CreateAPIView):
         except Exception:
             return Response({"detail": "Invalid amount format."}, status=status.HTTP_400_BAD_REQUEST)
 
+        provider_response = None
+
         with transaction.atomic():
             payment = Payment.objects.create(
                 user=request.user,
@@ -117,11 +121,43 @@ class CreatePaymentView(generics.CreateAPIView):
                     transaction.set_rollback(True)
                     return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
 
-        return Response({
+            if payment_method == Payment.Method.IDPAY:
+                callback_url = getattr(settings, "IDPAY_CALLBACK_URL", None)
+                if not callback_url:
+                    callback_url = request.build_absolute_uri(reverse("payments:payment-verify"))
+
+                order_id = str(payment.id)
+                multiplier = getattr(settings, "PAYMENT_AMOUNT_MULTIPLIER", 1)
+                amount_to_pay = int(payment.amount * multiplier)
+
+                try:
+                    provider_response = payment_utils.create_payment_request(
+                        order_id=order_id,
+                        amount=amount_to_pay,
+                        callback=callback_url,
+                    )
+                except Exception:
+                    transaction.set_rollback(True)
+                    return Response(
+                        {"detail": "Failed to create payment request."},
+                        status=status.HTTP_502_BAD_GATEWAY,
+                    )
+
+                payment.provider_data = provider_response
+                payment.save(update_fields=["provider_data", "updated_at"])
+
+        response_data = {
             "payment_id": payment.id,
             "status": payment.status,
-            "simulate_payment_url": f"/api/payments/verify/?payment_id={payment.id}",
-        }, status=status.HTTP_201_CREATED)
+        }
+
+        if payment_method == Payment.Method.WALLET:
+            response_data["simulate_payment_url"] = f"/api/payments/verify/?payment_id={payment.id}"
+
+        if provider_response:
+            response_data["payment_url"] = provider_response.get("link")
+
+        return Response(response_data, status=status.HTTP_201_CREATED)
 
 
 class IDPayCallbackView(APIView):
@@ -186,29 +222,103 @@ class IDPayCallbackView(APIView):
 
 
 class VerifyPaymentView(generics.GenericAPIView):
-    """
-    ✅ شبیه‌سازی پرداخت موفق (در آینده درگاه واقعی جایگزین می‌شود)
-    """
+    """Callback endpoint for IDPay payments."""
+
     permission_classes = [IsAuthenticated]
 
+    REQUIRED_FIELDS = ("id", "order_id", "status")
+
     def post(self, request, *args, **kwargs):
-        payment_id = request.query_params.get("payment_id")
+        data = request.data or {}
+
+        missing_fields = [field for field in self.REQUIRED_FIELDS if field not in data]
+        if missing_fields:
+            return Response(
+                {
+                    "detail": "Missing required fields.",
+                    "missing_fields": missing_fields,
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        provider_payment_id = data.get("id")
+        order_id = data.get("order_id")
+        status_code = data.get("status")
 
         try:
-            payment = Payment.objects.select_for_update().get(
-                id=payment_id, user=request.user
+            status_code = int(status_code)
+        except (TypeError, ValueError):
+            return Response(
+                {"detail": "Invalid status value."},
+                status=status.HTTP_400_BAD_REQUEST,
             )
-        except Payment.DoesNotExist:
-            return Response({"error": "Payment not found"}, status=404)
+
+        try:
+            order_id_int = int(order_id)
+        except (TypeError, ValueError):
+            return Response(
+                {"detail": "Invalid order_id value."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         with transaction.atomic():
-            payment.mark_completed(provider_data={"simulated": True})
+            try:
+                payment = (
+                    Payment.objects.select_for_update()
+                    .select_related("appointment")
+                    .get(id=order_id_int)
+                )
+            except Payment.DoesNotExist:
+                return Response({"detail": "Payment not found."}, status=404)
 
-        return Response({
-            "status": "Payment confirmed ✅",
-            "appointment_status": payment.appointment.status if payment.appointment else None,
-            "meet_link": getattr(payment.appointment, "google_meet_link", None),
-        }, status=status.HTTP_200_OK)
+            if payment.user_id != request.user.id:
+                return Response(
+                    {"detail": "You are not allowed to verify this payment."},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+
+            if str(order_id) != str(payment.id):
+                return Response(
+                    {"detail": "order_id does not match payment."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            if status_code in (100, 101):
+                try:
+                    provider_response = payment_utils.verify_payment_request(
+                        provider_payment_id
+                    )
+                except Exception:
+                    payment.mark_failed()
+                    return Response(
+                        {"detail": "Payment verification failed."},
+                        status=status.HTTP_502_BAD_GATEWAY,
+                    )
+
+                payment.transaction_id = provider_payment_id
+                payment.provider_data = provider_response
+                payment.save(update_fields=["transaction_id", "provider_data", "updated_at"])
+                payment.mark_completed()
+
+                return Response(
+                    {
+                        "status": "Payment confirmed ✅",
+                        "appointment_status": payment.appointment.status
+                        if payment.appointment
+                        else None,
+                        "meet_link": getattr(
+                            payment.appointment, "google_meet_link", None
+                        ),
+                        "provider_status": provider_response.get("status"),
+                    },
+                    status=status.HTTP_200_OK,
+                )
+
+            payment.mark_failed()
+            return Response(
+                {"detail": "Payment status is not successful.", "status_code": status_code},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
 
 class WalletDetailView(generics.RetrieveAPIView):
