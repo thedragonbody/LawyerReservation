@@ -13,6 +13,8 @@ from django.core.exceptions import ValidationError
 from notifications.models import Notification
 from common.utils import send_sms
 
+from .integrations import CalendarService, CalendarSyncError
+
 
 # لیست اسلات‌های آنلاین برای یک وکیل
 class OnlineSlotListView(generics.ListAPIView):
@@ -28,6 +30,16 @@ class OnlineAppointmentCreateView(generics.CreateAPIView):
     serializer_class = OnlineAppointmentSerializer
     permission_classes = [permissions.IsAuthenticated]
 
+    def create(self, request, *args, **kwargs):
+        self.calendar_sync_result = None
+        response = super().create(request, *args, **kwargs)
+        result = getattr(self, "calendar_sync_result", None)
+        if result and not result.success and result.message:
+            data = dict(response.data)
+            data['calendar_sync_warning'] = result.message
+            response.data = data
+        return response
+
     def perform_create(self, serializer):
         slot_id = self.request.data.get('slot')
         slot = get_object_or_404(OnlineSlot, pk=slot_id)
@@ -37,7 +49,8 @@ class OnlineAppointmentCreateView(generics.CreateAPIView):
             raise serializers.ValidationError("فقط کلاینت‌ها می‌توانند رزرو کنند.")
 
         appointment = serializer.save(client=client_profile, lawyer=slot.lawyer, slot=slot)
-        appointment.confirm()  # تایید اتوماتیک و ساخت Google Meet + Notification
+        calendar_service = CalendarService()
+        self.calendar_sync_result = appointment.confirm(calendar_service=calendar_service)
 
 # لیست رزروهای آنلاین کاربر
 class OnlineAppointmentListView(generics.ListAPIView):
@@ -59,73 +72,54 @@ class CancelOnlineAppointmentAPIView(APIView):
         user = request.user
         appointment = get_object_or_404(OnlineAppointment.objects.select_related("client__user", "slot"), pk=pk)
 
-        # اجازه: فقط کاربرِ مربوطه
         if appointment.client.user != user:
             return Response({"detail": "فقط کاربر صاحب رزرو می‌تواند آن را لغو کند."}, status=status.HTTP_403_FORBIDDEN)
 
-        # بررسی وضعیت قابل لغو بودن
         if appointment.status in ["cancelled", "completed"]:
             return Response({"detail": "این رزرو قابل لغو نیست."}, status=status.HTTP_400_BAD_REQUEST)
 
-        # بررسی مهلت 24 ساعت
         if appointment.slot.start_time - timezone.now() < timedelta(hours=24):
             return Response({"detail": "لغو تنها تا 24 ساعت قبل امکان‌پذیر است."}, status=status.HTTP_400_BAD_REQUEST)
 
-        # درخواست تأیید (اختیاری)
         serializer = OnlineAppointmentCancelSerializer(data=request.data or {"confirm": True})
         serializer.is_valid(raise_exception=True)
 
-        # عملیات اتمیک و جلوگیری از race conditions
         try:
-            with transaction.atomic():
-                # قفل روی appointment و slot
-                appt = OnlineAppointment.objects.select_for_update().get(pk=appointment.pk)
-                slot = OnlineSlot.objects.select_for_update().get(pk=appt.slot.pk)
-
-                # دوباره بررسی وضعیت و زمان داخل تراکنش
-                if appt.status in ["cancelled", "completed"]:
-                    return Response({"detail": "این رزرو قبلاً لغو یا تکمیل شده است."}, status=status.HTTP_400_BAD_REQUEST)
-                if slot.start_time - timezone.now() < timedelta(hours=24):
-                    return Response({"detail": "لغو تنها تا 24 ساعت قبل امکان‌پذیر است."}, status=status.HTTP_400_BAD_REQUEST)
-
-                # آزادسازی اسلات
-                slot.is_booked = False
-                slot.save(update_fields=["is_booked"])
-
-                # تغییر وضعیت رزرو
-                appt.status = "cancelled"
-                appt.save(update_fields=["status"])
-
-            # خارج از تراکنش: ارسال نوتیف و SMS
-            try:
-                Notification.objects.create(
-                    user=user,
-                    appointment=appointment,
-                    title="رزرو لغو شد",
-                    message=f"رزروی که برای {appointment.slot.start_time} با {appointment.lawyer.user.get_full_name()} داشتید، لغو شد."
-                )
-                Notification.objects.create(
-                    user=appointment.lawyer.user,
-                    appointment=appointment,
-                    title="رزرو کاربر لغو شد",
-                    message=f"{user.get_full_name()} رزوی که داشت را برای {appointment.slot.start_time} لغو کرد."
-                )
-            except Exception:
-                pass
-
-            try:
-                send_sms(user.phone_number, f"رزرو شما برای {appointment.slot.start_time} لغو شد.")
-                send_sms(appointment.lawyer.user.phone_number, f"رزرو کاربر {user.get_full_name()} برای {appointment.slot.start_time} لغو شد.")
-            except Exception:
-                pass
-
-            return Response({"detail": "رزرو با موفقیت لغو شد."}, status=status.HTTP_200_OK)
-
+            result = appointment.cancel(user=user, calendar_service=CalendarService())
         except ValidationError as e:
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-        except Exception as e:
+        except Exception:
             return Response({"detail": "خطا در لغو رزرو."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+        appointment.refresh_from_db(fields=["status", "calendar_event_id"])
+
+        try:
+            Notification.objects.create(
+                user=user,
+                appointment=appointment,
+                title="رزرو لغو شد",
+                message=f"رزروی که برای {appointment.slot.start_time} با {appointment.lawyer.user.get_full_name()} داشتید، لغو شد.",
+            )
+            Notification.objects.create(
+                user=appointment.lawyer.user,
+                appointment=appointment,
+                title="رزرو کاربر لغو شد",
+                message=f"{user.get_full_name()} رزوی که داشت را برای {appointment.slot.start_time} لغو کرد.",
+            )
+        except Exception:
+            pass
+
+        try:
+            send_sms(user.phone_number, f"رزرو شما برای {appointment.slot.start_time} لغو شد.")
+            send_sms(appointment.lawyer.user.phone_number, f"رزرو کاربر {user.get_full_name()} برای {appointment.slot.start_time} لغو شد.")
+        except Exception:
+            pass
+
+        response_data = {"detail": "رزرو با موفقیت لغو شد."}
+        if result and not result.success and result.message:
+            response_data["calendar_sync_warning"] = result.message
+
+        return Response(response_data, status=status.HTTP_200_OK)
 
 class RescheduleOnlineAppointmentAPIView(APIView):
     """
@@ -177,6 +171,7 @@ class RescheduleOnlineAppointmentAPIView(APIView):
         ).exclude(pk=appointment.pk).exists():
             return Response({"detail": "شما قبلاً یک رزرو تأیید شده در آن روز دارید."}, status=status.HTTP_400_BAD_REQUEST)
 
+        calendar_sync_warning = None
         try:
             with transaction.atomic():
                 # قفل روی appointment، old slot و new slot
@@ -207,6 +202,12 @@ class RescheduleOnlineAppointmentAPIView(APIView):
                 # appt.google_meet_link = appt.create_google_meet_link()
                 appt.save(update_fields=["slot", "status", "google_meet_link"])
 
+            calendar_service = CalendarService()
+            try:
+                calendar_service.update_event(appt)
+            except CalendarSyncError as exc:
+                calendar_sync_warning = str(exc)
+
             # خارج از تراکنش: ارسال نوتیف و sms
             try:
                 Notification.objects.create(
@@ -230,7 +231,10 @@ class RescheduleOnlineAppointmentAPIView(APIView):
             except Exception:
                 pass
 
-            return Response({"detail": "رزرو با موفقیت تغییر یافت.", "appointment_id": appt.pk}, status=status.HTTP_200_OK)
+            response_data = {"detail": "رزرو با موفقیت تغییر یافت.", "appointment_id": appt.pk}
+            if calendar_sync_warning:
+                response_data["calendar_sync_warning"] = calendar_sync_warning
+            return Response(response_data, status=status.HTTP_200_OK)
 
         except ValidationError as e:
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)

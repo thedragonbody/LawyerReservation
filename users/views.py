@@ -2,13 +2,18 @@ from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from django.contrib.auth import get_user_model
 from rest_framework_simplejwt.tokens import RefreshToken
-from .serializers import SendOTPSerializer, VerifyOTPSerializer, UserSerializer
-from .models import PasswordResetCode
+from .serializers import (
+    OAuthTokenSerializer,
+    ResendOTPSerializer,
+    SendOTPSerializer,
+    VerifyOTPSerializer,
+    UserSerializer,
+)
+from .models import OAuthToken, PasswordResetCode
 from .utils import send_sms_task_or_sync, register_device_for_user
 from .throttles import SMSRequestThrottle
 from rest_framework.throttling import AnonRateThrottle
 from django.db import transaction
-from .serializers import ResendOTPSerializer
 from rest_framework.views import APIView
 from client_profile.models import ClientProfile
 from django.utils import timezone
@@ -162,3 +167,39 @@ class BlacklistCleanupView(APIView):
             BlacklistedToken.objects.get_or_create(token=token)
         tokens.delete()
         return Response({"detail": f"{count} refresh token منقضی شدند."})
+
+
+class OAuthTokenView(APIView):
+    """Store, read and revoke OAuth tokens used for calendar integrations."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get_object(self, request, provider):
+        return get_object_or_404(OAuthToken, user=request.user, provider=provider)
+
+    def get(self, request, provider):
+        token = self.get_object(request, provider)
+        serializer = OAuthTokenSerializer(token)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def post(self, request, provider):
+        serializer = OAuthTokenSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data.copy()
+
+        expires_in = data.pop('expires_in', None)
+        if expires_in is not None and not data.get('expires_at'):
+            data['expires_at'] = timezone.now() + timedelta(seconds=expires_in)
+
+        token, created = OAuthToken.objects.update_or_create(
+            user=request.user,
+            provider=provider,
+            defaults=data,
+        )
+        response_serializer = OAuthTokenSerializer(token)
+        status_code = status.HTTP_201_CREATED if created else status.HTTP_200_OK
+        return Response(response_serializer.data, status=status_code)
+
+    def delete(self, request, provider):
+        deleted, _ = OAuthToken.objects.filter(user=request.user, provider=provider).delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
