@@ -87,7 +87,11 @@ class OnlineAppointmentListView(generics.ListAPIView):
 
     def get_queryset(self):
         client_profile = getattr(self.request.user, 'client_profile', None)
-        return OnlineAppointment.objects.filter(client=client_profile).order_by('-slot__start_time')
+        return (
+            OnlineAppointment.objects.select_related('slot', 'lawyer__user')
+            .filter(client=client_profile)
+            .order_by('-slot__start_time')
+        )
     
 class CancelOnlineAppointmentAPIView(APIView):
     """

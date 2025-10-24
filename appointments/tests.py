@@ -373,3 +373,89 @@ class CalendarOAuthFlowTests(TestCase):
         self.assertEqual(refreshed, 1)
         token.refresh_from_db()
         self.assertEqual(token.access_token, "task-access")
+
+
+class OnlineAppointmentListViewTests(TestCase):
+    def setUp(self):
+        self.client_user = User.objects.create_user(
+            phone_number="+989150000009",
+            password="secret",
+            first_name="Client",
+            last_name="Tester",
+        )
+        self.client_profile = ClientProfile.objects.create(user=self.client_user)
+
+        self.lawyer_user = User.objects.create_user(
+            phone_number="+989150000010",
+            password="secret",
+            first_name="Lawyer",
+            last_name="Expert",
+        )
+        self.lawyer_profile = LawyerProfile.objects.create(
+            user=self.lawyer_user,
+            expertise="Family Law",
+            specialization="Divorce",
+            status="online",
+        )
+
+        self.api_client = APIClient()
+        self.api_client.force_authenticate(user=self.client_user)
+
+        base_time = timezone.now() + timedelta(days=1)
+        for index in range(3):
+            start_time = base_time + timedelta(hours=index)
+            end_time = start_time + timedelta(minutes=30)
+            slot = OnlineSlot.objects.create(
+                lawyer=self.lawyer_profile,
+                start_time=start_time,
+                end_time=end_time,
+            )
+            OnlineAppointment.objects.create(
+                lawyer=self.lawyer_profile,
+                client=self.client_profile,
+                slot=slot,
+                status=AppointmentStatus.CONFIRMED,
+            )
+
+    def test_list_view_includes_slot_and_lawyer_metadata(self):
+        url = reverse("appointments:online-appointment-list")
+        response = self.api_client.get(url)
+
+        self.assertEqual(response.status_code, 200)
+
+        expected_count = OnlineAppointment.objects.filter(
+            client=self.client_profile
+        ).count()
+
+        data = response.data
+        if isinstance(data, dict) and "results" in data:
+            data = data["results"]
+
+        self.assertEqual(len(data), expected_count)
+
+        for item in data:
+            self.assertIn("slot_start", item)
+            self.assertIn("slot_end", item)
+            self.assertIn("lawyer_summary", item)
+
+            summary = item["lawyer_summary"]
+            self.assertIsInstance(summary, dict)
+            self.assertEqual(summary["id"], self.lawyer_profile.id)
+            self.assertEqual(summary["name"], self.lawyer_user.get_full_name())
+            self.assertEqual(summary["status"], self.lawyer_profile.status)
+            self.assertEqual(summary["expertise"], self.lawyer_profile.expertise)
+            self.assertEqual(summary["specialization"], self.lawyer_profile.specialization)
+
+    def test_list_view_uses_select_related(self):
+        url = reverse("appointments:online-appointment-list")
+
+        with self.assertNumQueries(2):
+            response = self.api_client.get(url)
+
+        self.assertEqual(response.status_code, 200)
+
+        data = response.data
+        if isinstance(data, dict) and "results" in data:
+            data = data["results"]
+
+        self.assertTrue(data)
