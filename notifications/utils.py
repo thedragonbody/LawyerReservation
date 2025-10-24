@@ -1,10 +1,11 @@
-import uuid
 from typing import TYPE_CHECKING
+
 from django.utils import timezone
 from datetime import timedelta
 from notifications.models import Notification
 from .sms_utils import really_send_sms  # استفاده مستقیم از ماژول مستقل
-from notifications.models import Notification
+
+from appointments.utils import create_meeting_link as appointment_create_meeting_link
 
 if TYPE_CHECKING:
     from .models import OnlineAppointment
@@ -14,13 +15,7 @@ def create_meeting_link(appointment: "OnlineAppointment", provider="jitsi"):
     """
     تولید لینک جلسه آنلاین (Jitsi یا Google Meet)
     """
-    if provider == "jitsi":
-        meeting_id = f"alovakil-{appointment.id}-{uuid.uuid4().hex[:8]}"
-        base = "https://meet.jit.si"
-        return f"{base}/{meeting_id}"
-    else:
-        # TODO: Google Meet API integration
-        return None
+    return appointment_create_meeting_link(appointment, provider=provider)
 
 
 def send_appointment_reminders():
