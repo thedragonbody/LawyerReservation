@@ -2,7 +2,7 @@ import json
 import logging
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
-from .models import ChatRoom, Message
+from .models import ChatRoom, Message, MessageReadStatus
 from .tasks import send_chat_notifications_task # 💡 NEW: Import Celery task
 
 logger = logging.getLogger("chat")
@@ -96,4 +96,17 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
     @database_sync_to_async
     def mark_messages_read(self, message_ids):
-        Message.objects.filter(id__in=message_ids).update(is_read=True)
+        user = self.scope.get("user") if hasattr(self, "scope") else None
+        if not user or getattr(user, "is_anonymous", False):
+            return 0
+
+        created_count = 0
+        queryset = Message.objects.filter(id__in=message_ids)
+        for message in queryset:
+            _, created = MessageReadStatus.objects.get_or_create(
+                message=message,
+                user=user,
+            )
+            if created:
+                created_count += 1
+        return created_count
