@@ -48,19 +48,19 @@ class Command(BaseCommand):
                 "group": "Database",
                 "key": "DB_NAME",
                 "note": "Primary PostgreSQL database name",
-                "required": True,
+                "required": self._database_credentials_required,
             },
             {
                 "group": "Database",
                 "key": "DB_USER",
                 "note": "Database username",
-                "required": True,
+                "required": self._database_credentials_required,
             },
             {
                 "group": "Database",
                 "key": "DB_PASSWORD",
                 "note": "Database password",
-                "required": True,
+                "required": self._database_credentials_required,
             },
             {
                 "group": "Payments",
@@ -147,3 +147,8 @@ class Command(BaseCommand):
 
     def _email_required(self) -> bool:
         return settings.EMAIL_BACKEND == 'django.core.mail.backends.smtp.EmailBackend'
+
+    def _database_credentials_required(self) -> bool:
+        default_db = settings.DATABASES.get("default", {})
+        engine = default_db.get("ENGINE", "")
+        return "postgresql" in engine

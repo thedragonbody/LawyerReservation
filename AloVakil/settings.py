@@ -31,7 +31,6 @@ IDPAY_CALLBACK_URL = env.str(
     "IDPAY_CALLBACK_URL",
     default="http://localhost:8000/api/payments/idpay/callback/",
 )
-IDPAY_CALLBACK_URL = env.str("IDPAY_CALLBACK_URL", default=None)
 PAYMENT_AMOUNT_MULTIPLIER = env.int("PAYMENT_AMOUNT_MULTIPLIER", default=1)
 
 # SMS
@@ -46,17 +45,28 @@ GOOGLE_OAUTH_REDIRECT_URI = env.str(
 )
 CALENDAR_OAUTH_STATE_TTL = env.int("CALENDAR_OAUTH_STATE_TTL", default=300)
 
-# DB example
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': env.str("DB_NAME", default=""),
-        'USER': env.str("DB_USER", default=""),
-        'PASSWORD': env.str("DB_PASSWORD", default=""),
-        'HOST': env.str("DB_HOST", default='localhost'),
-        'PORT': env.str("DB_PORT", default='5432'),
+# Database configuration
+_db_name = env.str("DB_NAME", default="").strip()
+
+if _db_name:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': _db_name,
+            'USER': env.str("DB_USER", default=""),
+            'PASSWORD': env.str("DB_PASSWORD", default=""),
+            'HOST': env.str("DB_HOST", default='localhost'),
+            'PORT': env.str("DB_PORT", default='5432'),
+        }
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
+
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
@@ -158,7 +168,10 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 AUTH_USER_MODEL = "users.User"
 
 # Email
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_BACKEND = env.str(
+    'EMAIL_BACKEND',
+    default='django.core.mail.backends.console.EmailBackend'
+)
 EMAIL_HOST = env.str('EMAIL_HOST', default='')
 EMAIL_PORT = env.int('EMAIL_PORT', default=587)
 EMAIL_HOST_USER = env.str('EMAIL_HOST_USER', default='')
