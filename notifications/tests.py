@@ -1,7 +1,9 @@
+import sys
+import types
 from decimal import Decimal
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
-from django.test import TestCase
+from django.test import SimpleTestCase, TestCase, override_settings
 from django.utils import timezone
 
 from appointments.models import InPersonAppointment
@@ -16,6 +18,52 @@ from notifications.models import Notification
 from payments.models import Payment
 from users.models import User
 from rest_framework.test import APITestCase
+
+from . import sms_utils
+
+
+class SMSUtilsTests(SimpleTestCase):
+    def tearDown(self) -> None:
+        sms_utils.get_sms_provider.cache_clear()
+
+    @override_settings(SMS_PROVIDER="console")
+    def test_console_provider_writes_to_stdout(self):
+        sms_utils.get_sms_provider.cache_clear()
+
+        with patch("notifications.sms_utils.print") as mock_print:
+            sms_utils.really_send_sms("+989120000000", "Test message")
+
+        mock_print.assert_called_once_with("Sending SMS to +989120000000: Test message")
+
+    @override_settings(SMS_PROVIDER="kavenegar", SMS_API_KEY="test-key", SMS_SENDER="1000")
+    def test_kavenegar_provider_uses_configured_client(self):
+        sms_utils.get_sms_provider.cache_clear()
+
+        fake_client = Mock()
+        fake_module = types.SimpleNamespace(
+            KavenegarAPI=Mock(return_value=fake_client),
+            APIException=Exception,
+            HTTPException=Exception,
+        )
+
+        with patch.dict(sys.modules, {"kavenegar": fake_module}):
+            sms_utils.really_send_sms("+989120000001", "Another message")
+
+        fake_module.KavenegarAPI.assert_called_once_with("test-key")
+        fake_client.sms_send.assert_called_once_with(
+            {
+                "receptor": "+989120000001",
+                "message": "Another message",
+                "sender": "1000",
+            }
+        )
+
+    @override_settings(SMS_PROVIDER="kavenegar", SMS_API_KEY="")
+    def test_kavenegar_provider_requires_api_key(self):
+        sms_utils.get_sms_provider.cache_clear()
+
+        with self.assertRaises(sms_utils.SMSConfigurationError):
+            sms_utils.really_send_sms("+989120000002", "Message")
 
 
 class NotificationChannelPreferenceTests(TestCase):
