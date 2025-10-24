@@ -1,3 +1,11 @@
+from datetime import timedelta
+
+from django.utils import timezone
+
+from appointments.models import OnlineAppointment
+from appointments.utils import create_meeting_link as appointment_create_meeting_link
+from notifications.models import Notification
+from .sms_utils import really_send_sms  # استفاده مستقیم از ماژول مستقل
 """Utility helpers for working with notifications."""
 
 import uuid
@@ -14,6 +22,7 @@ def create_meeting_link(appointment: OnlineAppointment, provider: str = "jitsi")
     """
     تولید لینک جلسه آنلاین (Jitsi یا Google Meet)
     """
+    return appointment_create_meeting_link(appointment, provider=provider)
     if provider == "jitsi":
         meeting_id = f"alovakil-{appointment.id}-{uuid.uuid4().hex[:8]}"
         base = "https://meet.jit.si"
@@ -53,6 +62,14 @@ def send_chat_notification(user, message):
         message=message
     )
 
+def send_push_notification(user, message):
+    """
+    ارسال پوش نوتیفیکیشن
+    """
+    # اینجا می‌تونی integration با FCM یا OneSignal اضافه کنی
+    Notification.objects.create(
+        user=user,
+        title="اعلان پوش",
 def send_push_notification(user, message, *, title: str = "اعلان پوش"):
     """Send a push notification using the console provider implementation."""
 
@@ -70,5 +87,6 @@ def send_notification(user, title, message):
     Notification.objects.create(
         user=user,
         title=title,
+        message=message,
         message=message
     )
