@@ -1,10 +1,11 @@
-from django.contrib.auth import get_user_model
-from rest_framework import serializers
-from .models import PasswordResetCode
-from client_profile.models import ClientProfile
-from django.utils import timezone
 from datetime import timedelta
+
+from django.contrib.auth import get_user_model
+from django.utils import timezone
 from rest_framework import serializers
+
+from .models import OAuthToken, PasswordResetCode
+from client_profile.models import ClientProfile
 
 User = get_user_model()
 
@@ -46,5 +47,41 @@ class UserSerializer(serializers.ModelSerializer):
 
 class ResendOTPSerializer(serializers.Serializer):
     phone_number = serializers.CharField(max_length=15)
+
+
+class OAuthTokenSerializer(serializers.ModelSerializer):
+    expires_in = serializers.IntegerField(write_only=True, required=False)
+
+    class Meta:
+        model = OAuthToken
+        fields = [
+            'provider',
+            'access_token',
+            'refresh_token',
+            'scope',
+            'token_type',
+            'expires_at',
+            'expires_in',
+        ]
+        read_only_fields = ['provider']
+
+    def validate(self, attrs):
+        expires_at = attrs.get('expires_at')
+        expires_in = attrs.get('expires_in')
+        if expires_at and expires_in:
+            raise serializers.ValidationError({'expires_at': 'یکی از فیلدهای expires_at یا expires_in را ارسال کنید.'})
+        return attrs
+
+    def create(self, validated_data):
+        raise NotImplementedError('Use update_or_create via the view')
+
+    def update(self, instance, validated_data):
+        raise NotImplementedError('Use update_or_create via the view')
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data['provider'] = instance.provider
+        data['is_expired'] = instance.is_expired
+        return data
     
     
