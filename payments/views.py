@@ -1,11 +1,20 @@
-from rest_framework import status, generics
-from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
-from django.db import transaction
+from decimal import Decimal
 
-from payments.models import Payment
+from django.core.exceptions import ValidationError
+from django.db import transaction
+from rest_framework import generics, status
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+
+from payments.models import Payment, Wallet
 from appointments.models import OnlineAppointment
-from payments.serializers import PaymentSerializer
+from payments.serializers import (
+    PaymentSerializer,
+    WalletReserveSerializer,
+    WalletSerializer,
+    WalletTopUpSerializer,
+)
+from payments import utils as payment_utils
 
 
 class CreatePaymentView(generics.CreateAPIView):
@@ -16,11 +25,11 @@ class CreatePaymentView(generics.CreateAPIView):
     serializer_class = PaymentSerializer
 
     def post(self, request, *args, **kwargs):
-        appointment_id = request.data.get("online_appointment_id")
+        appointment_id = request.data.get("appointment_id")
         amount = request.data.get("amount")
 
         if not appointment_id or not amount:
-            return Response({"error": "Missing online_appointment_id or amount"}, status=400)
+            return Response({"error": "Missing appointment_id or amount"}, status=400)
 
         try:
             appointment = OnlineAppointment.objects.get(
@@ -33,13 +42,29 @@ class CreatePaymentView(generics.CreateAPIView):
         if hasattr(appointment, "payment") and appointment.payment.status == Payment.Status.COMPLETED:
             return Response({"detail": "Payment already completed for this appointment."}, status=400)
 
+        payment_method = request.data.get("payment_method", Payment.Method.IDPAY)
+        if payment_method not in Payment.Method.values:
+            return Response({"detail": "Invalid payment method."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            amount_decimal = Decimal(str(amount))
+        except Exception:
+            return Response({"detail": "Invalid amount format."}, status=status.HTTP_400_BAD_REQUEST)
+
         with transaction.atomic():
             payment = Payment.objects.create(
                 user=request.user,
-                online_appointment=appointment,
-                amount=amount,
-                payment_method="simulation",
+                appointment=appointment,
+                amount=amount_decimal,
+                payment_method=payment_method,
             )
+
+            if payment_method == Payment.Method.WALLET:
+                try:
+                    payment_utils.reserve_wallet_funds(payment=payment)
+                except ValidationError as exc:
+                    transaction.set_rollback(True)
+                    return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
 
         return Response({
             "payment_id": payment.id,
@@ -69,6 +94,42 @@ class VerifyPaymentView(generics.GenericAPIView):
 
         return Response({
             "status": "Payment confirmed ✅",
-            "appointment_status": payment.online_appointment.status,
-            "meet_link": payment.online_appointment.meet_link,
+            "appointment_status": payment.appointment.status if payment.appointment else None,
+            "meet_link": getattr(payment.appointment, "google_meet_link", None),
         }, status=status.HTTP_200_OK)
+
+
+class WalletDetailView(generics.RetrieveAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = WalletSerializer
+
+    def get_object(self):
+        wallet, _ = Wallet.objects.get_or_create(user=self.request.user)
+        return wallet
+
+
+class WalletTopUpView(generics.GenericAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = WalletTopUpSerializer
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        wallet = serializer.save()
+        return Response(WalletSerializer(wallet).data, status=status.HTTP_200_OK)
+
+
+class WalletReserveView(generics.GenericAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = WalletReserveSerializer
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        payment, wallet = serializer.save()
+        data = WalletSerializer(wallet).data
+        data.update({
+            "payment_id": payment.id,
+            "reserved_amount": str(payment.wallet_reserved_amount),
+        })
+        return Response(data, status=status.HTTP_200_OK)
