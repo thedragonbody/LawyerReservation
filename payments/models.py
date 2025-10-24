@@ -126,7 +126,10 @@ class Payment(models.Model):
             related = "Subscription"
         else:
             related = "General"
-        return f"Payment {self.id} | {self.user.email} | {self.amount} | {related} | {self.status}"
+        return (
+            f"Payment {self.id} | {self.user.get_full_name()} | "
+            f"{self.amount} | {related} | {self.status}"
+        )
 
     def mark_completed(self, provider_data=None):
         if self.status == self.Status.COMPLETED:
