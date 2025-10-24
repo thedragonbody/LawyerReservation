@@ -1,9 +1,9 @@
-from elasticsearch_dsl import Document, Text, Date, Float, connections
-from elasticsearch_dsl.connections import connections
-from .models import Payment
-from django.conf import settings
+from elasticsearch_dsl import Document, Text, Date, Float
 
-connections.create_connection(**settings.ELASTICSEARCH_DSL['default'])
+from common.elasticsearch import create_default_connection
+from .models import Payment
+
+create_default_connection()
 
 class PaymentDocument(Document):
     transaction_id = Text()
@@ -15,3 +15,4 @@ class PaymentDocument(Document):
 
     def save(self, **kwargs):
         return super().save(**kwargs)
+

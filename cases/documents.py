@@ -1,9 +1,9 @@
-from elasticsearch_dsl import Document, Text, Date, connections
-from elasticsearch_dsl.connections import connections
-from .models import Case
-from django.conf import settings
+from elasticsearch_dsl import Document, Text, Date
 
-connections.create_connection(**settings.ELASTICSEARCH_DSL['default'])
+from common.elasticsearch import create_default_connection
+from .models import Case
+
+create_default_connection()
 
 class CaseDocument(Document):
     title = Text()
@@ -15,3 +15,4 @@ class CaseDocument(Document):
 
     def save(self, **kwargs):
         return super().save(**kwargs)
+
