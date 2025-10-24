@@ -1,4 +1,5 @@
 from datetime import timedelta
+from typing import Optional
 
 from celery import shared_task
 from appointments.services.reminders import dispatch_upcoming_reminders
@@ -17,7 +18,10 @@ def send_sms_task(self, phone_number, message):
 
 
 
-def send_upcoming_appointment_notifications(window_hours: int = 1) -> int:
+def send_upcoming_appointment_notifications(window_hours: Optional[float] = None):
     """Delegate reminder sending to the shared appointments reminder service."""
 
-    return dispatch_upcoming_reminders(window=timedelta(hours=window_hours))
+    window = None
+    if window_hours is not None:
+        window = timedelta(hours=float(window_hours))
+    return dispatch_upcoming_reminders(window=window)

@@ -1,6 +1,7 @@
 """Celery tasks for the appointments app."""
 
 from datetime import timedelta
+from typing import Optional
 
 from celery import shared_task
 from django.utils import timezone
@@ -11,10 +12,13 @@ from users.models import OAuthToken
 
 
 @shared_task(name="appointments.tasks.send_appointment_reminders_task")
-def send_appointment_reminders_task() -> int:
+def send_appointment_reminders_task(window_minutes: Optional[float] = None):
     """Schedule-friendly wrapper around ``dispatch_upcoming_reminders``."""
 
-    return dispatch_upcoming_reminders()
+    window = None
+    if window_minutes is not None:
+        window = timedelta(minutes=float(window_minutes))
+    return dispatch_upcoming_reminders(window=window)
 
 
 @shared_task(name="appointments.tasks.refresh_expiring_oauth_tokens")
