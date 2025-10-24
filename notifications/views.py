@@ -1,8 +1,8 @@
-from rest_framework import generics, permissions, status
+from rest_framework import generics, permissions
 from rest_framework.response import Response
+
 from .models import Notification
 from .serializers import NotificationSerializer
-from .utils import send_site_notification
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 
@@ -13,8 +13,8 @@ class NotificationListView(generics.ListAPIView):
     def get_queryset(self):
         user = self.request.user
         if user.is_staff:
-            return Notification.objects.all().order_by('created_at')
-        return Notification.objects.filter(user=user).order_by('created_at')
+            return Notification.objects.all().order_by("-created_at")
+        return Notification.objects.filter(user=user).order_by("-created_at")
 
 class NotificationCreateView(generics.CreateAPIView):
     serializer_class = NotificationSerializer
@@ -61,7 +61,7 @@ class NotificationMarkReadView(generics.UpdateAPIView):
     def patch(self, request, *args, **kwargs):
         notification = self.get_object()
         notification.status = Notification.Status.READ
-        notification.save()
+        notification.save(update_fields=["status", "updated_at"])
         return Response(NotificationSerializer(notification).data)
 
 class NotificationDeleteView(generics.DestroyAPIView):

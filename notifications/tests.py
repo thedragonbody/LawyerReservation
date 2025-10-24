@@ -15,6 +15,7 @@ from lawyer_profile.models import LawyerProfile
 from notifications.models import Notification
 from payments.models import Payment
 from users.models import User
+from rest_framework.test import APITestCase
 
 
 class NotificationChannelPreferenceTests(TestCase):
@@ -168,3 +169,84 @@ class InPersonPaymentNotificationTests(TestCase):
             {n.user for n in notifications},
             {self.client_user, self.lawyer_user},
         )
+
+
+class NotificationAPITests(APITestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            phone_number="+989120000000",
+            password="secret",
+            first_name="Client",
+        )
+        self.other_user = User.objects.create_user(
+            phone_number="+989120000001",
+            password="secret",
+            first_name="Other",
+        )
+
+        Notification.objects.create(
+            user=self.user,
+            title="پیام ۱",
+            message="متن",
+            type=Notification.Type.GENERAL,
+        )
+        Notification.objects.create(
+            user=self.other_user,
+            title="پیام ۲",
+            message="متن",
+            type=Notification.Type.GENERAL,
+        )
+
+        self.client.force_authenticate(user=self.user)
+
+    def test_list_notifications_returns_only_current_user(self):
+        response = self.client.get("/notifications/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]["title"], "پیام ۱")
+        self.assertEqual(response.data[0]["status"], Notification.Status.UNREAD)
+
+    def test_create_notification_sets_defaults(self):
+        payload = {
+            "title": "عنوان",
+            "message": "متن",
+            "type": Notification.Type.APPOINTMENT_REMINDER,
+            "link": "https://example.com/detail",
+        }
+
+        response = self.client.post("/notifications/create/", data=payload, format="json")
+
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.data["user"], self.user.id)
+        self.assertEqual(response.data["status"], Notification.Status.UNREAD)
+        self.assertEqual(response.data["type"], Notification.Type.APPOINTMENT_REMINDER)
+        self.assertEqual(response.data["link"], payload["link"])
+
+    def test_mark_read_updates_status(self):
+        notification = Notification.objects.create(
+            user=self.user,
+            title="خوانده شود",
+            message="متن",
+        )
+
+        url = f"/notifications/{notification.id}/mark-read/"
+        response = self.client.patch(url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["status"], Notification.Status.READ)
+        notification.refresh_from_db()
+        self.assertEqual(notification.status, Notification.Status.READ)
+
+    def test_delete_notification(self):
+        notification = Notification.objects.create(
+            user=self.user,
+            title="حذف",
+            message="متن",
+        )
+
+        url = f"/notifications/{notification.id}/delete/"
+        response = self.client.delete(url)
+
+        self.assertEqual(response.status_code, 204)
+        self.assertFalse(Notification.objects.filter(id=notification.id).exists())
