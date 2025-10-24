@@ -1,6 +1,7 @@
 """Utility helpers for working with notifications."""
 
 from datetime import timedelta
+from typing import Optional
 
 from appointments.models import OnlineAppointment
 from appointments.services.reminders import dispatch_upcoming_reminders
@@ -16,10 +17,10 @@ def create_meeting_link(appointment: OnlineAppointment, provider: str = "jitsi")
     return appointment_create_meeting_link(appointment, provider=provider)
 
 
-def send_appointment_reminders():
-    """Wrapper around :func:`dispatch_upcoming_reminders` with default window."""
+def send_appointment_reminders(window: Optional[timedelta] = None):
+    """Wrapper around :func:`dispatch_upcoming_reminders` with configurable window."""
 
-    return dispatch_upcoming_reminders(window=timedelta(hours=1))
+    return dispatch_upcoming_reminders(window=window)
 
 
 def send_sms(phone_number: str, message: str) -> None:

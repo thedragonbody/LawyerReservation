@@ -36,6 +36,11 @@ PAYMENT_AMOUNT_MULTIPLIER = env.int("PAYMENT_AMOUNT_MULTIPLIER", default=1)
 # SMS
 SMS_API_KEY = env.str("SMS_API_KEY", default=None)
 
+# Appointments
+APPOINTMENT_REMINDER_WINDOW = timedelta(
+    minutes=env.int("APPOINTMENT_REMINDER_WINDOW", default=60)
+)
+
 # OAuth configuration
 GOOGLE_OAUTH_CLIENT_ID = env.str("GOOGLE_OAUTH_CLIENT_ID", default="test-google-client-id")
 GOOGLE_OAUTH_CLIENT_SECRET = env.str("GOOGLE_OAUTH_CLIENT_SECRET", default="test-google-client-secret")
