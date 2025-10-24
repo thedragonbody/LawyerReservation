@@ -15,6 +15,7 @@ from appointments.services.reminders import (
 from client_profile.models import ClientProfile
 from lawyer_profile.models import LawyerProfile
 from notifications.models import Notification
+from notifications.utils import send_notification, send_push_notification
 from payments.models import Payment
 from users.models import User
 from rest_framework.test import APITestCase
@@ -129,6 +130,42 @@ class NotificationChannelPreferenceTests(TestCase):
 
         mock_notification_send.assert_called_once()
         mock_send_sms.assert_called_once_with(self.user.phone_number, "SMS body")
+
+
+class NotificationUtilityTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            phone_number="+989110000000",
+            password="secret",
+            first_name="Utility",
+        )
+
+    def test_send_notification_creates_record_with_defaults(self):
+        notification = send_notification(
+            self.user,
+            title="Hello",
+            message="World",
+        )
+
+        self.assertIsInstance(notification, Notification)
+        self.assertEqual(notification.user, self.user)
+        self.assertEqual(notification.title, "Hello")
+        self.assertEqual(notification.message, "World")
+        self.assertEqual(notification.type, Notification.Type.GENERAL)
+        self.assertIsNone(notification.link)
+
+    def test_send_push_notification_uses_default_title_and_forwards_kwargs(self):
+        notification = send_push_notification(
+            self.user,
+            message="Push body",
+            link="https://example.com",
+        )
+
+        self.assertEqual(notification.user, self.user)
+        self.assertEqual(notification.title, "اعلان پوش")
+        self.assertEqual(notification.message, "Push body")
+        self.assertEqual(notification.type, Notification.Type.GENERAL)
+        self.assertEqual(notification.link, "https://example.com")
 
 
 class InPersonPaymentNotificationTests(TestCase):
