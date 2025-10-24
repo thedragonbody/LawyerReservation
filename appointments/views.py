@@ -13,12 +13,14 @@ from common.utils import send_sms
 from notifications.models import Notification
 
 from .integrations import CalendarService, CalendarSyncError
-from .models import OnlineAppointment, OnlineSlot
+from .models import OnsiteAppointment, OnsiteSlot, OnlineAppointment, OnlineSlot
 from .serializers import (
     OnlineAppointmentCancelSerializer,
     OnlineAppointmentRescheduleSerializer,
     OnlineAppointmentSerializer,
     OnlineSlotSerializer,
+    OnsiteAppointmentSerializer,
+    OnsiteSlotSerializer,
 )
 
 
@@ -247,3 +249,97 @@ class RescheduleOnlineAppointmentAPIView(APIView):
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             return Response({"detail": "خطا در تغییر زمان رزرو."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class OnsiteSlotListCreateView(generics.ListCreateAPIView):
+    serializer_class = OnsiteSlotSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        lawyer_profile = getattr(self.request.user, "lawyer_profile", None)
+        if not lawyer_profile:
+            return OnsiteSlot.objects.none()
+        return OnsiteSlot.objects.filter(lawyer=lawyer_profile).order_by("start_time")
+
+    def perform_create(self, serializer):
+        lawyer_profile = getattr(self.request.user, "lawyer_profile", None)
+        if not lawyer_profile:
+            raise serializers.ValidationError("فقط وکلا می‌توانند اسلات حضوری ثبت کنند.")
+        serializer.save(lawyer=lawyer_profile)
+
+
+class OnsiteSlotDetailView(generics.RetrieveUpdateDestroyAPIView):
+    serializer_class = OnsiteSlotSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        lawyer_profile = getattr(self.request.user, "lawyer_profile", None)
+        if not lawyer_profile:
+            return OnsiteSlot.objects.none()
+        return OnsiteSlot.objects.filter(lawyer=lawyer_profile)
+
+    def perform_destroy(self, instance):
+        if instance.appointments.exclude(status=AppointmentStatus.CANCELLED).exists():
+            raise serializers.ValidationError("امکان حذف اسلات رزرو شده وجود ندارد.")
+        instance.delete()
+
+
+class OnsiteAppointmentListCreateView(generics.ListCreateAPIView):
+    serializer_class = OnsiteAppointmentSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        lawyer_profile = getattr(self.request.user, "lawyer_profile", None)
+        client_profile = getattr(self.request.user, "client_profile", None)
+
+        if lawyer_profile:
+            return OnsiteAppointment.objects.filter(lawyer=lawyer_profile).order_by("-slot__start_time")
+        if client_profile:
+            return OnsiteAppointment.objects.filter(client=client_profile).order_by("-slot__start_time")
+        return OnsiteAppointment.objects.none()
+
+    def perform_create(self, serializer):
+        client_profile = getattr(self.request.user, "client_profile", None)
+        if not client_profile:
+            raise serializers.ValidationError("فقط موکلین می‌توانند رزرو حضوری ثبت کنند.")
+        slot = serializer.validated_data.get("slot")
+        if slot is None:
+            raise serializers.ValidationError({"slot": "انتخاب اسلات الزامی است."})
+        serializer.save(client=client_profile, lawyer=slot.lawyer)
+
+
+class OnsiteAppointmentDetailView(generics.RetrieveUpdateAPIView):
+    serializer_class = OnsiteAppointmentSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        lawyer_profile = getattr(self.request.user, "lawyer_profile", None)
+        client_profile = getattr(self.request.user, "client_profile", None)
+
+        if lawyer_profile:
+            return OnsiteAppointment.objects.filter(lawyer=lawyer_profile)
+        if client_profile:
+            return OnsiteAppointment.objects.filter(client=client_profile)
+        return OnsiteAppointment.objects.none()
+
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        status_value = request.data.get("status")
+
+        if status_value is None:
+            return Response({"detail": "فقط بروزرسانی وضعیت پشتیبانی می‌شود."}, status=status.HTTP_400_BAD_REQUEST)
+
+        if status_value != AppointmentStatus.CANCELLED:
+            return Response({"detail": "امکان تغییر وضعیت به مقدار درخواستی وجود ندارد."}, status=status.HTTP_400_BAD_REQUEST)
+
+        client_profile = getattr(request.user, "client_profile", None)
+        if client_profile != instance.client:
+            return Response({"detail": "فقط موکل می‌تواند رزرو را لغو کند."}, status=status.HTTP_403_FORBIDDEN)
+
+        instance.status = AppointmentStatus.CANCELLED
+        instance.save(update_fields=["status"])
+        serializer = self.get_serializer(instance)
+        return Response(serializer.data)
+
+    def partial_update(self, request, *args, **kwargs):
+        return self.update(request, *args, **kwargs)
