@@ -1,14 +1,11 @@
-from typing import TYPE_CHECKING
+from datetime import timedelta
 
 from django.utils import timezone
-from datetime import timedelta
+
+from appointments.models import OnlineAppointment
+from appointments.utils import create_meeting_link as appointment_create_meeting_link
 from notifications.models import Notification
 from .sms_utils import really_send_sms  # استفاده مستقیم از ماژول مستقل
-
-from appointments.utils import create_meeting_link as appointment_create_meeting_link
-
-if TYPE_CHECKING:
-    from .models import OnlineAppointment
 
 
 def create_meeting_link(appointment: "OnlineAppointment", provider="jitsi"):
@@ -78,15 +75,15 @@ def send_chat_notification(user, message):
     )
 
 def send_push_notification(user, message):
-        """
-        ارسال پوش نوتیفیکیشن
-        """
-        # اینجا می‌تونی integration با FCM یا OneSignal اضافه کنی
-        Notification.objects.create(
-            user=user,
-            title="اعلان پوش",
-            message=message
-        )
+    """
+    ارسال پوش نوتیفیکیشن
+    """
+    # اینجا می‌تونی integration با FCM یا OneSignal اضافه کنی
+    Notification.objects.create(
+        user=user,
+        title="اعلان پوش",
+        message=message,
+    )
     
 
 def send_notification(user, title, message):
@@ -96,5 +93,5 @@ def send_notification(user, title, message):
     Notification.objects.create(
         user=user,
         title=title,
-        message=message
+        message=message,
     )
