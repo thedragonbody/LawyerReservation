@@ -1,0 +1,216 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fa">
+<head>
+    <meta charset="utf-8">
+    <title>اتصال تقویم</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body {
+            font-family: sans-serif;
+            margin: 2rem;
+            background-color: #f5f7fb;
+            color: #1c1c1c;
+            line-height: 1.6;
+        }
+        .card {
+            background: #fff;
+            border-radius: 16px;
+            padding: 2rem;
+            max-width: 720px;
+            margin: 0 auto;
+            box-shadow: 0 16px 40px rgba(44, 62, 80, 0.1);
+        }
+        h1 {
+            font-size: 1.8rem;
+            margin-bottom: 0.5rem;
+        }
+        .meta {
+            color: #6b7280;
+            font-size: 0.9rem;
+        }
+        button {
+            border: none;
+            border-radius: 8px;
+            padding: 0.75rem 1.5rem;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            margin-right: 0.5rem;
+            margin-top: 1rem;
+        }
+        button.primary {
+            background: linear-gradient(135deg, #2563eb, #4f46e5);
+            color: #fff;
+            box-shadow: 0 10px 25px rgba(37, 99, 235, 0.25);
+        }
+        button.secondary {
+            background: #f3f4f6;
+            color: #1f2937;
+        }
+        button.danger {
+            background: #fee2e2;
+            color: #b91c1c;
+        }
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+        button:not(:disabled):hover {
+            transform: translateY(-1px);
+        }
+        #status {
+            margin-top: 1rem;
+            background: #eef2ff;
+            border-radius: 12px;
+            padding: 1rem 1.5rem;
+        }
+        .log {
+            margin-top: 1.5rem;
+            background: #0f172a;
+            color: #e2e8f0;
+            padding: 1rem;
+            border-radius: 12px;
+            font-size: 0.9rem;
+            max-height: 260px;
+            overflow-y: auto;
+        }
+        .log-entry {
+            margin-bottom: 0.75rem;
+        }
+        .badge {
+            display: inline-block;
+            border-radius: 6px;
+            padding: 0.15rem 0.6rem;
+            font-size: 0.8rem;
+            background: #e5e7eb;
+            color: #111827;
+            margin-left: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+<div class="card">
+    <h1>اتصال تقویم {{ provider|title }}</h1>
+    <p class="meta">آدرس بازگشت: <code>{{ callback_url }}</code></p>
+    <p class="meta">زمان ایجاد صفحه: {{ generated_at }}</p>
+
+    <form id="csrf-form">{% csrf_token %}</form>
+
+    <div id="status">در حال بررسی وضعیت فعلی اتصال...</div>
+
+    <div>
+        <button id="connect-btn" class="primary">اتصال به {{ provider|title }}</button>
+        <button id="refresh-btn" class="secondary" disabled>تازه‌سازی توکن</button>
+        <button id="disconnect-btn" class="danger" disabled>قطع اتصال</button>
+    </div>
+
+    <div class="log" id="log"></div>
+</div>
+
+<script>
+(function () {
+    const startUrl = "{{ start_url }}";
+    const statusUrl = "{{ status_url }}";
+    const refreshUrl = "{{ refresh_url }}";
+    const disconnectUrl = "{{ disconnect_url }}";
+    const logContainer = document.getElementById('log');
+    const statusContainer = document.getElementById('status');
+    const connectBtn = document.getElementById('connect-btn');
+    const refreshBtn = document.getElementById('refresh-btn');
+    const disconnectBtn = document.getElementById('disconnect-btn');
+    const csrfToken = document.querySelector('input[name="csrfmiddlewaretoken"]').value;
+
+    function addLog(message) {
+        const entry = document.createElement('div');
+        entry.className = 'log-entry';
+        entry.textContent = new Date().toLocaleTimeString() + ' — ' + message;
+        logContainer.prepend(entry);
+    }
+
+    async function fetchStatus() {
+        addLog('در حال دریافت وضعیت فعلی...');
+        const response = await fetch(statusUrl, {credentials: 'include'});
+        const data = await response.json();
+        if (!data.connected) {
+            statusContainer.innerHTML = 'هیچ توکن فعالی ثبت نشده است.';
+            refreshBtn.disabled = true;
+            disconnectBtn.disabled = true;
+            return;
+        }
+        const expires = data.expires_at ? new Date(data.expires_at).toLocaleString() : 'نامشخص';
+        statusContainer.innerHTML = `توکن فعال است <span class="badge">${data.provider}</span><br>` +
+            `انقضا: ${expires}<br>` +
+            `نیاز به نوسازی: ${data.needs_refresh ? 'بله' : 'خیر'}`;
+        refreshBtn.disabled = !data.can_refresh;
+        disconnectBtn.disabled = false;
+        addLog('وضعیت کنونی: اتصال برقرار است.');
+    }
+
+    connectBtn.addEventListener('click', async (event) => {
+        event.preventDefault();
+        addLog('درخواست URL احراز هویت...');
+        connectBtn.disabled = true;
+        const response = await fetch(startUrl, {credentials: 'include'});
+        connectBtn.disabled = false;
+        if (!response.ok) {
+            addLog('خطا در دریافت آدرس احراز هویت.');
+            return;
+        }
+        const data = await response.json();
+        addLog('هدایت به Google برای تکمیل فرآیند...');
+        window.location.href = data.authorization_url;
+    });
+
+    refreshBtn.addEventListener('click', async (event) => {
+        event.preventDefault();
+        refreshBtn.disabled = true;
+        addLog('ارسال درخواست تازه‌سازی توکن...');
+        const response = await fetch(refreshUrl, {
+            method: 'POST',
+            credentials: 'include',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken,
+            },
+        });
+        if (response.ok) {
+            addLog('توکن با موفقیت تازه‌سازی شد.');
+            await fetchStatus();
+        } else {
+            const error = await response.json();
+            addLog('خطا در تازه‌سازی: ' + (error.detail || 'نامشخص'));
+            refreshBtn.disabled = false;
+        }
+    });
+
+    disconnectBtn.addEventListener('click', async (event) => {
+        event.preventDefault();
+        disconnectBtn.disabled = true;
+        addLog('در حال حذف توکن ذخیره‌شده...');
+        const response = await fetch(disconnectUrl, {
+            method: 'DELETE',
+            credentials: 'include',
+            headers: {
+                'X-CSRFToken': csrfToken,
+            },
+        });
+        if (response.status === 204) {
+            addLog('توکن حذف شد.');
+            statusContainer.innerHTML = 'هیچ توکن فعالی ثبت نشده است.';
+            refreshBtn.disabled = true;
+        } else {
+            addLog('عدم موفقیت در حذف توکن.');
+            disconnectBtn.disabled = false;
+        }
+    });
+
+    fetchStatus().catch(() => {
+        statusContainer.innerHTML = 'امکان بازیابی وضعیت فعلی وجود ندارد.';
+        addLog('عدم موفقیت در دریافت وضعیت فعلی.');
+    });
+})();
+</script>
+</body>
+</html>

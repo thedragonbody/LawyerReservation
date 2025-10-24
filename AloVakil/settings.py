@@ -19,7 +19,8 @@ env = environ.Env(
 # خواندن .env از BASE_DIR
 environ.Env.read_env(BASE_DIR / '.env')
 
-SECRET_KEY = env('SECRET_KEY')
+_SECRET_KEY_PLACEHOLDER = "django-insecure-placeholder"
+SECRET_KEY = env.str('SECRET_KEY', default=_SECRET_KEY_PLACEHOLDER)
 DEBUG = env.bool('DEBUG', default=False)
 
 # IDPay config
@@ -31,13 +32,22 @@ PAYMENT_AMOUNT_MULTIPLIER = env.int("PAYMENT_AMOUNT_MULTIPLIER", default=1)
 # SMS
 SMS_API_KEY = env.str("SMS_API_KEY", default=None)
 
+# OAuth configuration
+GOOGLE_OAUTH_CLIENT_ID = env.str("GOOGLE_OAUTH_CLIENT_ID", default="test-google-client-id")
+GOOGLE_OAUTH_CLIENT_SECRET = env.str("GOOGLE_OAUTH_CLIENT_SECRET", default="test-google-client-secret")
+GOOGLE_OAUTH_REDIRECT_URI = env.str(
+    "GOOGLE_OAUTH_REDIRECT_URI",
+    default="http://localhost:8000/appointments/calendar/oauth/google/callback/",
+)
+CALENDAR_OAUTH_STATE_TTL = env.int("CALENDAR_OAUTH_STATE_TTL", default=300)
+
 # DB example
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': env.str("DB_NAME"),
-        'USER': env.str("DB_USER"),
-        'PASSWORD': env.str("DB_PASSWORD"),
+        'NAME': env.str("DB_NAME", default=""),
+        'USER': env.str("DB_USER", default=""),
+        'PASSWORD': env.str("DB_PASSWORD", default=""),
         'HOST': env.str("DB_HOST", default='localhost'),
         'PORT': env.str("DB_PORT", default='5432'),
     }
@@ -144,9 +154,16 @@ AUTH_USER_MODEL = "users.User"
 
 # Email
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = env.str('EMAIL_HOST', default='')
+EMAIL_PORT = env.int('EMAIL_PORT', default=587)
+EMAIL_HOST_USER = env.str('EMAIL_HOST_USER', default='')
+EMAIL_HOST_PASSWORD = env.str('EMAIL_HOST_PASSWORD', default='')
+EMAIL_USE_TLS = env.bool('EMAIL_USE_TLS', default=True)
+EMAIL_USE_SSL = env.bool('EMAIL_USE_SSL', default=False)
+DEFAULT_FROM_EMAIL = env.str('DEFAULT_FROM_EMAIL', default=EMAIL_HOST_USER)
 
 # Channels
-USE_INMEMORY = os.getenv("USE_INMEMORY_CHANNEL_LAYER", "true").lower() == "true"
+USE_INMEMORY = env.bool("USE_INMEMORY_CHANNEL_LAYER", default=True)
 
 if USE_INMEMORY:
     CHANNEL_LAYERS = {
@@ -160,7 +177,7 @@ else:
         }
     }
 
-SMS_SENDER = "1000596446"
+SMS_SENDER = env.str("SMS_SENDER", default="1000596446")
 
 ELASTICSEARCH_DSL = {
     'default': {
@@ -185,7 +202,7 @@ CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 
 # AI
-OPENAI_API_KEY = "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"
+OPENAI_API_KEY = env.str("OPENAI_API_KEY", default=None)
 
 AI_FREE_DAILY_LIMIT = 10
 AI_FREE_MONTHLY_LIMIT = 300
@@ -300,4 +317,4 @@ CELERY_TIMEZONE = "Asia/Tehran"
 MIDDLEWARE += ["common.middleware.SessionIdleTimeout"]
 SESSION_IDLE_TIMEOUT = 60*60*24
 
-SMS_PROVIDER = "console"
+SMS_PROVIDER = env.str("SMS_PROVIDER", default="console")

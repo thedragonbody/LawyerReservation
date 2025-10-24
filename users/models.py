@@ -10,6 +10,7 @@ from django.utils.translation import gettext_lazy as _
 
 from geopy.geocoders import Nominatim
 
+from common.fields import EncryptedTextField
 
 # ================= Custom User =================
 class UserManager(BaseUserManager):
@@ -116,8 +117,8 @@ class OAuthToken(models.Model):
 
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="oauth_tokens")
     provider = models.CharField(max_length=50, choices=PROVIDER_CHOICES, default="google")
-    access_token = models.TextField()
-    refresh_token = models.TextField(blank=True, null=True)
+    access_token = EncryptedTextField()
+    refresh_token = EncryptedTextField(blank=True, null=True)
     scope = models.CharField(max_length=255, blank=True)
     token_type = models.CharField(max_length=50, blank=True)
     expires_at = models.DateTimeField(blank=True, null=True)
@@ -135,7 +136,15 @@ class OAuthToken(models.Model):
     def is_expired(self):
         return bool(self.expires_at and self.expires_at <= timezone.now())
 
-    def mark_refreshed(self, expires_in=None, access_token=None, refresh_token=None, scope=None, token_type=None):
+    def mark_refreshed(
+        self,
+        expires_in=None,
+        access_token=None,
+        refresh_token=None,
+        scope=None,
+        token_type=None,
+        expires_at=None,
+    ):
         if access_token is not None:
             self.access_token = access_token
         if refresh_token is not None:
@@ -146,5 +155,7 @@ class OAuthToken(models.Model):
             self.token_type = token_type
         if expires_in is not None:
             self.expires_at = timezone.now() + timedelta(seconds=expires_in)
+        elif expires_at is not None:
+            self.expires_at = expires_at
         self.save()
         
