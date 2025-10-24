@@ -9,6 +9,7 @@ from rest_framework import generics, permissions, serializers, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from common.choices import AppointmentStatus
 from common.utils import send_sms
 from notifications.models import Notification
 
