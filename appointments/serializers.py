@@ -14,10 +14,68 @@ class OnlineSlotSerializer(serializers.ModelSerializer):
         fields = ['id', 'lawyer', 'start_time', 'end_time', 'is_booked', 'price']
 
 class OnlineAppointmentSerializer(serializers.ModelSerializer):
+    slot_start_time = serializers.SerializerMethodField()
+    slot_end_time = serializers.SerializerMethodField()
+    lawyer_summary = serializers.SerializerMethodField()
+
     class Meta:
         model = OnlineAppointment
-        fields = ['id', 'lawyer', 'client', 'slot', 'status', 'google_meet_link', 'description']
-        read_only_fields = ['status', 'google_meet_link', 'client']
+        fields = [
+            'id',
+            'lawyer',
+            'client',
+            'slot',
+            'status',
+            'google_meet_link',
+            'description',
+            'slot_start_time',
+            'slot_end_time',
+            'lawyer_summary',
+        ]
+        read_only_fields = [
+            'status',
+            'google_meet_link',
+            'client',
+            'slot_start_time',
+            'slot_end_time',
+            'lawyer_summary',
+        ]
+
+    def get_slot_start_time(self, obj):
+        slot = getattr(obj, 'slot', None)
+        if slot and slot.start_time is not None:
+            field = serializers.DateTimeField()
+            return field.to_representation(slot.start_time)
+        return None
+
+    def get_slot_end_time(self, obj):
+        slot = getattr(obj, 'slot', None)
+        if slot and slot.end_time is not None:
+            field = serializers.DateTimeField()
+            return field.to_representation(slot.end_time)
+        return None
+
+    def get_lawyer_summary(self, obj):
+        lawyer = getattr(obj, 'lawyer', None)
+        if not lawyer:
+            return None
+
+        user = getattr(lawyer, 'user', None)
+        if not user:
+            return None
+
+        full_name = user.get_full_name()
+
+        return {
+            'id': lawyer.id,
+            'full_name': full_name,
+            'phone_number': user.phone_number,
+            'expertise': lawyer.expertise,
+            'specialization': lawyer.specialization,
+            'experience_years': lawyer.experience_years,
+            'status': lawyer.status,
+            'avatar': lawyer.avatar.url if getattr(lawyer, 'avatar', None) else None,
+        }
 
 class OnlineAppointmentCancelSerializer(serializers.Serializer):
     # برای cancel فقط نیاز به تایید اقدام داریم (اختیاری میتونی دلیل هم اضافه کنی)

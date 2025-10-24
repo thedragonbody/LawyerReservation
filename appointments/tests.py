@@ -6,9 +6,10 @@ from django.core.exceptions import ValidationError
 from django.db import connection
 from django.test import TestCase
 from django.utils import timezone
+from django.utils.dateparse import parse_datetime
 from django.urls import reverse
 
-from rest_framework.test import APIClient
+from rest_framework.test import APIClient, APIRequestFactory
 
 from appointments.integrations import CalendarService, CalendarSyncError
 from appointments.models import (
@@ -17,8 +18,10 @@ from appointments.models import (
     OnsiteAppointment,
     OnsiteSlot,
 )
+from appointments.serializers import OnlineAppointmentSerializer
 from appointments.services.reminders import dispatch_upcoming_reminders
 from appointments.tasks import refresh_expiring_oauth_tokens, send_appointment_reminders_task
+from appointments.views import OnlineAppointmentListView
 from appointments.utils import create_meeting_link
 from client_profile.models import ClientProfile
 from common.choices import AppointmentStatus
@@ -435,3 +438,111 @@ class CalendarOAuthFlowTests(TestCase):
         self.assertEqual(refreshed, 1)
         token.refresh_from_db()
         self.assertEqual(token.access_token, "task-access")
+class OnlineAppointmentSerializerTests(TestCase):
+    def setUp(self):
+        self.client_user = User.objects.create_user(
+            phone_number="+989100000010",
+            password="secret",
+            first_name="Client",
+            last_name="User",
+        )
+        self.client_profile = ClientProfile.objects.create(user=self.client_user)
+
+        self.lawyer_user = User.objects.create_user(
+            phone_number="+989100000011",
+            password="secret",
+            first_name="Lawyer",
+            last_name="Person",
+        )
+        self.lawyer_profile = LawyerProfile.objects.create(
+            user=self.lawyer_user,
+            expertise="Family Law",
+            specialization="Divorce",
+            experience_years=5,
+            status="online",
+        )
+
+        slot_start = timezone.now() + timedelta(days=1)
+        slot_end = slot_start + timedelta(minutes=45)
+        self.slot = OnlineSlot.objects.create(
+            lawyer=self.lawyer_profile,
+            start_time=slot_start,
+            end_time=slot_end,
+        )
+
+        self.appointment = OnlineAppointment.objects.create(
+            lawyer=self.lawyer_profile,
+            client=self.client_profile,
+            slot=self.slot,
+        )
+
+    def test_serializer_includes_slot_and_lawyer_metadata(self):
+        serializer = OnlineAppointmentSerializer(instance=self.appointment)
+        data = serializer.data
+
+        self.assertIn('slot_start_time', data)
+        self.assertIn('slot_end_time', data)
+        self.assertIn('lawyer_summary', data)
+
+        start_value = parse_datetime(data['slot_start_time'])
+        end_value = parse_datetime(data['slot_end_time'])
+        self.assertEqual(start_value, self.slot.start_time)
+        self.assertEqual(end_value, self.slot.end_time)
+
+        summary = data['lawyer_summary']
+        self.assertIsInstance(summary, dict)
+        self.assertEqual(summary['id'], self.lawyer_profile.id)
+        self.assertEqual(summary['full_name'], self.lawyer_user.get_full_name())
+        self.assertEqual(summary['expertise'], self.lawyer_profile.expertise)
+        self.assertEqual(summary['specialization'], self.lawyer_profile.specialization)
+
+
+class OnlineAppointmentListViewTests(TestCase):
+    def setUp(self):
+        self.factory = APIRequestFactory()
+
+        self.client_user = User.objects.create_user(
+            phone_number="+989100000020",
+            password="secret",
+            first_name="Client",
+            last_name="Viewer",
+        )
+        self.client_profile = ClientProfile.objects.create(user=self.client_user)
+
+        self.lawyer_user = User.objects.create_user(
+            phone_number="+989100000021",
+            password="secret",
+            first_name="Lawyer",
+            last_name="Viewer",
+        )
+        self.lawyer_profile = LawyerProfile.objects.create(
+            user=self.lawyer_user,
+            expertise="Civil",
+        )
+
+        for index in range(3):
+            slot_start = timezone.now() + timedelta(days=1, hours=index)
+            slot_end = slot_start + timedelta(minutes=30)
+            slot = OnlineSlot.objects.create(
+                lawyer=self.lawyer_profile,
+                start_time=slot_start,
+                end_time=slot_end,
+            )
+            OnlineAppointment.objects.create(
+                lawyer=self.lawyer_profile,
+                client=self.client_profile,
+                slot=slot,
+            )
+
+    def test_queryset_uses_select_related_for_lawyer_and_slot(self):
+        view = OnlineAppointmentListView()
+        request = self.factory.get('/appointments/')
+        request.user = self.client_user
+        view.request = request
+
+        queryset = view.get_queryset()
+
+        with self.assertNumQueries(1):
+            data = OnlineAppointmentSerializer(queryset, many=True).data
+
+        self.assertEqual(len(data), 3)
