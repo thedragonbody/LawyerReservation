@@ -113,35 +113,17 @@ class CancelOnlineAppointmentAPIView(APIView):
         serializer.is_valid(raise_exception=True)
 
         try:
-            result = appointment.cancel(user=user, calendar_service=CalendarService())
+            result = appointment.cancel(
+                user=user,
+                calendar_service=CalendarService(),
+                send_notifications=True,
+            )
         except ValidationError as e:
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         except Exception:
             return Response({"detail": "خطا در لغو رزرو."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         appointment.refresh_from_db(fields=["status", "calendar_event_id"])
-
-        try:
-            Notification.objects.create(
-                user=user,
-                appointment=appointment,
-                title="رزرو لغو شد",
-                message=f"رزروی که برای {appointment.slot.start_time} با {appointment.lawyer.user.get_full_name()} داشتید، لغو شد.",
-            )
-            Notification.objects.create(
-                user=appointment.lawyer.user,
-                appointment=appointment,
-                title="رزرو کاربر لغو شد",
-                message=f"{user.get_full_name()} رزوی که داشت را برای {appointment.slot.start_time} لغو کرد.",
-            )
-        except Exception:
-            pass
-
-        try:
-            send_sms(user.phone_number, f"رزرو شما برای {appointment.slot.start_time} لغو شد.")
-            send_sms(appointment.lawyer.user.phone_number, f"رزرو کاربر {user.get_full_name()} برای {appointment.slot.start_time} لغو شد.")
-        except Exception:
-            pass
 
         response_data = {"detail": "رزرو با موفقیت لغو شد."}
         if result and not result.success and result.message:

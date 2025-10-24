@@ -190,8 +190,7 @@ class Payment(models.Model):
         self.save(update_fields=["status", "updated_at"])
 
         if self.appointment:
-            # TODO: align with appointment cancellation workflow
-            pass
+            self.appointment.cancel_by_system()
         if self.inperson_appointment:
             self.inperson_appointment.mark_payment_refunded()
         if self.subscription:

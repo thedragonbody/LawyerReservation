@@ -196,3 +196,70 @@ class InPersonPaymentFlowTests(TestCase):
         self.assertSetEqual(notified_users, {self.client_user, self.lawyer_user})
 
         self.assertEqual(mock_send_sms.call_count, 2)
+
+
+class OnlinePaymentRefundFlowTests(TestCase):
+    def setUp(self):
+        self.client_user = User.objects.create_user(
+            phone_number="09120000020",
+            password="pass1234",
+            is_active=True,
+            first_name="Client",
+        )
+        self.client_profile = ClientProfile.objects.create(user=self.client_user)
+
+        self.lawyer_user = User.objects.create_user(
+            phone_number="09120000021",
+            password="pass1234",
+            is_active=True,
+            first_name="Lawyer",
+        )
+        self.lawyer_profile = LawyerProfile.objects.create(user=self.lawyer_user)
+
+        start_time = timezone.now() + timezone.timedelta(days=2)
+        end_time = start_time + timezone.timedelta(minutes=30)
+        self.slot = OnlineSlot.objects.create(
+            lawyer=self.lawyer_profile,
+            start_time=start_time,
+            end_time=end_time,
+            price=Decimal("500000"),
+        )
+
+        self.appointment = OnlineAppointment.objects.create(
+            lawyer=self.lawyer_profile,
+            client=self.client_profile,
+            slot=self.slot,
+        )
+
+        self.payment = Payment.objects.create(
+            user=self.client_user,
+            amount=Decimal("500000"),
+            appointment=self.appointment,
+            status=Payment.Status.PENDING,
+        )
+
+    @patch("appointments.models.send_sms")
+    def test_mark_refunded_cancels_online_appointment(self, mock_send_sms):
+        self.payment.mark_completed()
+
+        # پاک‌سازی نوتیفیکیشن‌ها و ریست فراخوانی SMS برای مرحله بازپرداخت
+        Notification.objects.all().delete()
+        mock_send_sms.reset_mock()
+
+        self.payment.mark_refunded()
+
+        self.payment.refresh_from_db()
+        self.assertEqual(self.payment.status, Payment.Status.REFUNDED)
+
+        self.appointment.refresh_from_db()
+        self.assertEqual(self.appointment.status, AppointmentStatus.CANCELLED)
+
+        self.slot.refresh_from_db()
+        self.assertFalse(self.slot.is_booked)
+
+        notifications = Notification.objects.all()
+        self.assertEqual(notifications.count(), 2)
+        notification_titles = {n.title for n in notifications}
+        self.assertSetEqual(notification_titles, {"رزرو لغو شد", "رزرو کاربر لغو شد"})
+
+        self.assertEqual(mock_send_sms.call_count, 2)
