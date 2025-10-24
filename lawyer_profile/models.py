@@ -1,3 +1,5 @@
+from urllib.parse import quote_plus
+
 from django.db import models
 from users.models import User
 
@@ -54,10 +56,29 @@ class LawyerProfile(models.Model):
         return self.status == 'offline'
 
     def get_office_location(self):
+        latitude = float(self.office_latitude) if self.office_latitude is not None else None
+        longitude = float(self.office_longitude) if self.office_longitude is not None else None
+        address = self.office_address
+
+        map_query = None
+        if latitude is not None and longitude is not None:
+            map_query = f"{latitude},{longitude}"
+        elif address:
+            map_query = address
+
+        map_url = None
+        map_embed_url = None
+        if map_query:
+            encoded_query = quote_plus(str(map_query))
+            map_url = f"https://www.google.com/maps/search/?api=1&query={encoded_query}"
+            map_embed_url = f"https://maps.google.com/maps?q={encoded_query}&output=embed"
+
         return {
-            "address": self.office_address,
-            "latitude": self.office_latitude,
-            "longitude": self.office_longitude,
+            "address": address,
+            "latitude": latitude,
+            "longitude": longitude,
+            "map_url": map_url,
+            "map_embed_url": map_embed_url,
         }
 
     def full_profile(self):

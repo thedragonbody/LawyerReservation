@@ -39,12 +39,29 @@ class OnlineAppointmentCreateView(generics.CreateAPIView):
 
     def create(self, request, *args, **kwargs):
         self.calendar_sync_result = None
+        self.created_appointment = None
         response = super().create(request, *args, **kwargs)
+        data = dict(response.data)
+
+        appointment = getattr(self, "created_appointment", None)
+        if appointment:
+            office_info = appointment.lawyer.get_office_location()
+            if office_info:
+                meaningful_office_values = [
+                    office_info.get("address"),
+                    office_info.get("latitude"),
+                    office_info.get("longitude"),
+                    office_info.get("map_url"),
+                    office_info.get("map_embed_url"),
+                ]
+                if any(value not in (None, "") for value in meaningful_office_values):
+                    data["office"] = office_info
+
         result = getattr(self, "calendar_sync_result", None)
         if result and not result.success and result.message:
-            data = dict(response.data)
             data['calendar_sync_warning'] = result.message
-            response.data = data
+
+        response.data = data
         return response
 
     def perform_create(self, serializer):
@@ -56,6 +73,7 @@ class OnlineAppointmentCreateView(generics.CreateAPIView):
             raise serializers.ValidationError("فقط کلاینت‌ها می‌توانند رزرو کنند.")
 
         appointment = serializer.save(client=client_profile, lawyer=slot.lawyer, slot=slot)
+        self.created_appointment = appointment
         calendar_service = CalendarService()
         self.calendar_sync_result = appointment.confirm(calendar_service=calendar_service)
 
