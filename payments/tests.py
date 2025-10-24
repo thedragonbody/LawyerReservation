@@ -303,6 +303,71 @@ class InPersonPaymentFlowTests(TestCase):
         self.assertEqual(mock_send_sms.call_count, 2)
 
 
+class IDPayCallbackTests(APITestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            phone_number="09120000020",
+            password="pass1234",
+            is_active=True,
+        )
+        self.other_user = User.objects.create_user(
+            phone_number="09120000021",
+            password="pass1234",
+            is_active=True,
+        )
+        self.url = reverse("payments:idpay-callback")
+
+    def test_success_callback_updates_payment_without_authentication(self):
+        payment = Payment.objects.create(
+            user=self.user,
+            amount=Decimal("123000"),
+            payment_method=Payment.Method.IDPAY,
+        )
+
+        payload = {
+            "order_id": str(payment.id),
+            "status": 100,
+            "track_id": "TRK-SUCCESS",
+            "user": self.other_user.id,
+        }
+
+        response = self.client.post(self.url, payload, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        payment.refresh_from_db()
+        self.assertEqual(payment.status, Payment.Status.COMPLETED)
+        self.assertEqual(payment.transaction_id, "TRK-SUCCESS")
+        self.assertEqual(payment.user, self.user)
+        self.assertEqual(response.data["status"], Payment.Status.COMPLETED)
+        self.assertEqual(payment.provider_data.get("track_id"), "TRK-SUCCESS")
+
+    def test_failed_callback_marks_payment_failed_and_preserves_user(self):
+        payment = Payment.objects.create(
+            user=self.user,
+            amount=Decimal("456000"),
+            payment_method=Payment.Method.IDPAY,
+        )
+
+        payload = {
+            "order_id": str(payment.id),
+            "status": -1,
+            "track_id": "TRK-FAIL",
+            "user": self.other_user.id,
+        }
+
+        response = self.client.post(self.url, payload, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        payment.refresh_from_db()
+        self.assertEqual(payment.status, Payment.Status.FAILED)
+        self.assertEqual(payment.transaction_id, "TRK-FAIL")
+        self.assertEqual(payment.user, self.user)
+        self.assertEqual(response.data["status"], Payment.Status.FAILED)
+        self.assertEqual(payment.provider_data.get("status"), -1)
+        self.assertEqual(payment.provider_data.get("track_id"), "TRK-FAIL")
+
 class OnlinePaymentRefundFlowTests(TestCase):
     def setUp(self):
         self.client_user = User.objects.create_user(

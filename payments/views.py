@@ -5,11 +5,13 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.urls import reverse
 from rest_framework import generics, status
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from payments.models import Payment, Wallet
-from appointments.models import OnlineAppointment
+from appointments.models import InPersonAppointment, OnlineAppointment
+from ai_assistant.models import Subscription
 from payments.serializers import (
     PaymentSerializer,
     WalletReserveSerializer,
@@ -28,21 +30,68 @@ class CreatePaymentView(generics.CreateAPIView):
 
     def post(self, request, *args, **kwargs):
         appointment_id = request.data.get("appointment_id")
+        subscription_id = request.data.get("subscription_id")
+        inperson_appointment_id = request.data.get("inperson_appointment_id") or request.data.get(
+            "inperson_appointment"
+        )
         amount = request.data.get("amount")
 
-        if not appointment_id or not amount:
-            return Response({"error": "Missing appointment_id or amount"}, status=400)
-
-        try:
-            appointment = OnlineAppointment.objects.get(
-                id=appointment_id, client__user=request.user
+        related_params = [value for value in [appointment_id, subscription_id, inperson_appointment_id] if value]
+        if not related_params:
+            return Response(
+                {"error": "Missing appointment_id, subscription_id, or inperson_appointment."},
+                status=status.HTTP_400_BAD_REQUEST,
             )
-        except OnlineAppointment.DoesNotExist:
-            return Response({"error": "Appointment not found or unauthorized"}, status=404)
 
-        # جلوگیری از ایجاد پرداخت تکراری
-        if appointment.payments.filter(status=Payment.Status.COMPLETED).exists():
-            return Response({"detail": "Payment already completed for this appointment."}, status=400)
+        if len(related_params) > 1:
+            return Response(
+                {"detail": "Only one of appointment_id, subscription_id, or inperson_appointment can be provided."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if not amount:
+            return Response({"error": "Missing amount"}, status=status.HTTP_400_BAD_REQUEST)
+
+        appointment = None
+        subscription = None
+        inperson_appointment = None
+
+        if appointment_id:
+            try:
+                appointment = OnlineAppointment.objects.get(
+                    id=appointment_id, client__user=request.user
+                )
+            except OnlineAppointment.DoesNotExist:
+                return Response({"error": "Appointment not found or unauthorized"}, status=status.HTTP_404_NOT_FOUND)
+        elif subscription_id:
+            try:
+                subscription = Subscription.objects.get(id=subscription_id, user=request.user)
+            except Subscription.DoesNotExist:
+                return Response({"error": "Subscription not found or unauthorized"}, status=status.HTTP_404_NOT_FOUND)
+        elif inperson_appointment_id:
+            try:
+                inperson_appointment = InPersonAppointment.objects.get(
+                    id=inperson_appointment_id, client__user=request.user
+                )
+            except InPersonAppointment.DoesNotExist:
+                return Response(
+                    {"error": "In-person appointment not found or unauthorized"},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+
+        related_filter = {}
+        duplicate_error = "Payment already completed for this appointment."
+        if appointment:
+            related_filter = {"appointment": appointment}
+        elif subscription:
+            related_filter = {"subscription": subscription}
+            duplicate_error = "Payment already completed for this subscription."
+        elif inperson_appointment:
+            related_filter = {"inperson_appointment": inperson_appointment}
+            duplicate_error = "Payment already completed for this in-person appointment."
+
+        if related_filter and Payment.objects.filter(status=Payment.Status.COMPLETED, **related_filter).exists():
+            return Response({"detail": duplicate_error}, status=status.HTTP_400_BAD_REQUEST)
 
         payment_method = request.data.get("payment_method", Payment.Method.IDPAY)
         if payment_method not in Payment.Method.values:
@@ -59,6 +108,8 @@ class CreatePaymentView(generics.CreateAPIView):
             payment = Payment.objects.create(
                 user=request.user,
                 appointment=appointment,
+                subscription=subscription,
+                inperson_appointment=inperson_appointment,
                 amount=amount_decimal,
                 payment_method=payment_method,
             )
@@ -107,6 +158,67 @@ class CreatePaymentView(generics.CreateAPIView):
             response_data["payment_url"] = provider_response.get("link")
 
         return Response(response_data, status=status.HTTP_201_CREATED)
+
+
+class IDPayCallbackView(APIView):
+    """Handle IDPay webhook callbacks without requiring authentication."""
+
+    permission_classes = [AllowAny]
+
+    SUCCESS_STATUSES = {100, 101}
+
+    def post(self, request, *args, **kwargs):
+        order_id = request.data.get("order_id")
+        status_value = request.data.get("status")
+        track_id = request.data.get("track_id")
+
+        if not order_id:
+            return Response({"detail": "order_id is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            order_id_int = int(order_id)
+        except (TypeError, ValueError):
+            return Response({"detail": "Invalid order_id."}, status=status.HTTP_400_BAD_REQUEST)
+
+        if track_id in (None, ""):
+            return Response({"detail": "track_id is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            status_int = int(status_value)
+        except (TypeError, ValueError):
+            return Response({"detail": "Invalid status value."}, status=status.HTTP_400_BAD_REQUEST)
+
+        provider_payload = {key: request.data.get(key) for key in request.data}
+
+        with transaction.atomic():
+            try:
+                payment = Payment.objects.select_for_update().get(id=order_id_int)
+            except Payment.DoesNotExist:
+                return Response({"detail": "Payment not found."}, status=status.HTTP_404_NOT_FOUND)
+
+            update_fields = []
+            if payment.transaction_id != track_id:
+                payment.transaction_id = track_id
+                update_fields.append("transaction_id")
+
+            if status_int in self.SUCCESS_STATUSES:
+                if update_fields:
+                    update_fields.append("updated_at")
+                    payment.save(update_fields=update_fields)
+                payment.mark_completed(provider_data=provider_payload)
+                result_status = payment.status
+                message = "Payment completed."
+            else:
+                update_fields.append("provider_data")
+                payment.provider_data = provider_payload
+                update_fields.append("updated_at")
+                payment.save(update_fields=update_fields)
+                payment.mark_failed()
+                payment.refresh_from_db(fields=["status"])
+                result_status = payment.status
+                message = "Payment failed."
+
+        return Response({"detail": message, "status": result_status}, status=status.HTTP_200_OK)
 
 
 class VerifyPaymentView(generics.GenericAPIView):
