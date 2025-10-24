@@ -1,13 +1,18 @@
 from decimal import Decimal
 
+from unittest.mock import patch
+
+from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from appointments.models import OnlineAppointment, OnlineSlot
+from appointments.models import InPersonAppointment, OnlineAppointment, OnlineSlot
 from client_profile.models import ClientProfile
+from common.choices import AppointmentStatus
 from lawyer_profile.models import LawyerProfile
+from notifications.models import Notification
 from payments.models import Payment, Wallet
 from users.models import User
 
@@ -117,3 +122,77 @@ class PaymentCreationTests(APITestCase):
             Payment.objects.filter(appointment=self.appointment).count(),
             1,
         )
+
+
+class InPersonPaymentFlowTests(TestCase):
+    def setUp(self):
+        self.client_user = User.objects.create_user(
+            phone_number="09120000010",
+            password="pass1234",
+            is_active=True,
+            first_name="Client",
+        )
+        self.client_profile = ClientProfile.objects.create(user=self.client_user)
+
+        self.lawyer_user = User.objects.create_user(
+            phone_number="09120000011",
+            password="pass1234",
+            is_active=True,
+            first_name="Lawyer",
+        )
+        self.lawyer_profile = LawyerProfile.objects.create(user=self.lawyer_user)
+
+        scheduled_for = timezone.now() + timezone.timedelta(days=2)
+        self.inperson_appointment = InPersonAppointment.objects.create(
+            lawyer=self.lawyer_profile,
+            client=self.client_profile,
+            scheduled_for=scheduled_for,
+            location="دفتر مرکزی",
+        )
+
+        self.payment = Payment.objects.create(
+            user=self.client_user,
+            amount=Decimal("750000"),
+            inperson_appointment=self.inperson_appointment,
+            status=Payment.Status.PENDING,
+        )
+
+    @patch("appointments.models.send_sms")
+    def test_mark_completed_updates_status_and_notifies(self, mock_send_sms):
+        self.payment.mark_completed()
+
+        self.inperson_appointment.refresh_from_db()
+        self.assertEqual(self.inperson_appointment.status, AppointmentStatus.PAID)
+
+        notifications = Notification.objects.filter(
+            type=Notification.Type.INPERSON_PAYMENT_SUCCESS
+        )
+        self.assertEqual(notifications.count(), 2)
+        notified_users = {n.user for n in notifications}
+        self.assertSetEqual(notified_users, {self.client_user, self.lawyer_user})
+
+        self.payment.refresh_from_db()
+        self.assertEqual(self.payment.status, Payment.Status.COMPLETED)
+
+        self.assertEqual(mock_send_sms.call_count, 2)
+
+    @patch("appointments.models.send_sms")
+    def test_mark_refunded_rolls_back_status_and_notifies(self, mock_send_sms):
+        self.payment.mark_completed()
+        mock_send_sms.reset_mock()
+
+        self.payment.mark_refunded()
+
+        self.inperson_appointment.refresh_from_db()
+        self.assertEqual(self.inperson_appointment.status, AppointmentStatus.PENDING)
+        self.payment.refresh_from_db()
+        self.assertEqual(self.payment.status, Payment.Status.REFUNDED)
+
+        notifications = Notification.objects.filter(
+            type=Notification.Type.INPERSON_PAYMENT_REFUNDED
+        )
+        self.assertEqual(notifications.count(), 2)
+        notified_users = {n.user for n in notifications}
+        self.assertSetEqual(notified_users, {self.client_user, self.lawyer_user})
+
+        self.assertEqual(mock_send_sms.call_count, 2)

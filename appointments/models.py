@@ -7,7 +7,7 @@ from django.dispatch import receiver
 from django.utils import timezone
 
 from client_profile.models import ClientProfile
-from common.choices import AppointmentStatus
+from common.choices import AppointmentStatus, SessionType
 from common.models import BaseModel
 from common.utils import send_sms
 from lawyer_profile.models import LawyerProfile
@@ -158,6 +158,99 @@ class OnlineAppointment(BaseModel):
             print(f"[Warning] Failed to send notification or SMS: {e}")
 
 
+class InPersonAppointment(BaseModel):
+    lawyer = models.ForeignKey(
+        LawyerProfile,
+        on_delete=models.CASCADE,
+        related_name="inperson_appointments",
+    )
+    client = models.ForeignKey(
+        ClientProfile,
+        on_delete=models.CASCADE,
+        related_name="inperson_appointments",
+    )
+    scheduled_for = models.DateTimeField()
+    status = models.CharField(
+        max_length=20,
+        choices=AppointmentStatus.choices,
+        default=AppointmentStatus.PENDING,
+    )
+    location = models.CharField(max_length=255, blank=True)
+    notes = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ["scheduled_for"]
+
+    def __str__(self):
+        start_time = timezone.localtime(self.scheduled_for)
+        return (
+            f"جلسه حضوری {self.client.user.get_full_name()} با "
+            f"{self.lawyer.user.get_full_name()} در {start_time:%Y-%m-%d %H:%M}"
+        )
+
+    @property
+    def session_type(self):
+        return SessionType.OFFLINE
+
+    def mark_payment_completed(self):
+        updated_fields = []
+        if self.status != AppointmentStatus.PAID:
+            self.status = AppointmentStatus.PAID
+            updated_fields.append("status")
+        if updated_fields:
+            self.save(update_fields=updated_fields)
+        self._send_payment_notification(is_refund=False)
+
+    def mark_payment_refunded(self):
+        updated_fields = []
+        if self.status != AppointmentStatus.PENDING:
+            self.status = AppointmentStatus.PENDING
+            updated_fields.append("status")
+        if updated_fields:
+            self.save(update_fields=updated_fields)
+        self._send_payment_notification(is_refund=True)
+
+    def _send_payment_notification(self, *, is_refund: bool):
+        event_time = timezone.localtime(self.scheduled_for).strftime("%Y-%m-%d %H:%M")
+        lawyer_name = self.lawyer.user.get_full_name() or self.lawyer.user.phone_number
+        client_name = self.client.user.get_full_name() or self.client.user.phone_number
+
+        if is_refund:
+            client_title = "بازگشت وجه رزرو حضوری"
+            lawyer_title = "بازگشت وجه جلسه حضوری"
+            client_message = (
+                f"مبلغ پرداختی شما برای جلسه حضوری با {lawyer_name} در تاریخ {event_time} بازگشت داده شد."
+            )
+            lawyer_message = (
+                f"مبلغ جلسه حضوری با {client_name} در تاریخ {event_time} به کاربر بازگردانده شد."
+            )
+            notification_type = Notification.Type.INPERSON_PAYMENT_REFUNDED
+        else:
+            client_title = "پرداخت جلسه حضوری تایید شد"
+            lawyer_title = "پرداخت جلسه حضوری جدید"
+            client_message = (
+                f"پرداخت شما برای جلسه حضوری با {lawyer_name} در تاریخ {event_time} با موفقیت ثبت شد."
+            )
+            lawyer_message = (
+                f"پرداخت جلسه حضوری با {client_name} در تاریخ {event_time} با موفقیت انجام شد."
+            )
+            notification_type = Notification.Type.INPERSON_PAYMENT_SUCCESS
+
+        Notification.send(
+            user=self.client.user,
+            title=client_title,
+            message=client_message,
+            type_=notification_type,
+        )
+        Notification.send(
+            user=self.lawyer.user,
+            title=lawyer_title,
+            message=lawyer_message,
+            type_=notification_type,
+        )
+
+        send_sms(self.client.user.phone_number, client_message)
+        send_sms(self.lawyer.user.phone_number, lawyer_message)
 class OnsiteSlot(BaseModel):
     lawyer = models.ForeignKey(
         LawyerProfile, on_delete=models.CASCADE, related_name="onsite_slots"
