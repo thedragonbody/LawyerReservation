@@ -29,4 +29,31 @@ class LawyerProfileSerializer(serializers.ModelSerializer):
         ]
 
     def get_office(self, obj):
-        return obj.get_office_location()
+        location = obj.get_office_location()
+        if not location:
+            return None
+
+        meaningful_values = [
+            location.get("address"),
+            location.get("latitude"),
+            location.get("longitude"),
+            location.get("map_url"),
+            location.get("map_embed_url"),
+        ]
+        if not any(value not in (None, "") for value in meaningful_values):
+            return None
+
+        latitude = location.get("latitude")
+        longitude = location.get("longitude")
+
+        return {
+            "address": location.get("address"),
+            "latitude": latitude,
+            "longitude": longitude,
+            "coordinates": {
+                "latitude": latitude,
+                "longitude": longitude,
+            },
+            "map_url": location.get("map_url"),
+            "map_embed_url": location.get("map_embed_url"),
+        }
