@@ -6,6 +6,7 @@ from django.shortcuts import get_object_or_404
 from django.utils import timezone
 
 from rest_framework import generics, permissions, serializers, status
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -23,17 +24,30 @@ from .serializers import (
     OnsiteAppointmentSerializer,
     OnsiteSlotSerializer,
 )
+from .utils import filter_online_slots
 
 
 
 # لیست اسلات‌های آنلاین برای یک وکیل
+class OnlineSlotPagination(PageNumberPagination):
+    page_size = 10
+    page_size_query_param = "page_size"
+    max_page_size = 50
+
+
 class OnlineSlotListView(generics.ListAPIView):
     serializer_class = OnlineSlotSerializer
     permission_classes = [permissions.AllowAny]
+    pagination_class = OnlineSlotPagination
 
     def get_queryset(self):
-        lawyer_id = self.kwargs['lawyer_id']
-        return OnlineSlot.objects.filter(lawyer_id=lawyer_id, is_booked=False, start_time__gte=timezone.now())
+        lawyer_id = self.kwargs["lawyer_id"]
+        base_queryset = OnlineSlot.objects.filter(
+            lawyer_id=lawyer_id,
+            is_booked=False,
+            start_time__gte=timezone.now(),
+        )
+        return filter_online_slots(base_queryset, self.request.query_params)
 
 # رزرو آنلاین یک اسلات
 class OnlineAppointmentCreateView(generics.CreateAPIView):
