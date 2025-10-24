@@ -1,9 +1,10 @@
-from elasticsearch_dsl import Document, Text, Keyword, Integer, Date, connections
-from django.conf import settings
+from elasticsearch_dsl import Document, Text, Keyword, Integer, Date
+
+from common.elasticsearch import create_default_connection
 from .models import User
 
 # ================== اتصال به ES ==================
-connections.create_connection(**settings.ELASTICSEARCH_DSL['default'])
+create_default_connection()
 
 # ================== User Document ==================
 class UserDocument(Document):

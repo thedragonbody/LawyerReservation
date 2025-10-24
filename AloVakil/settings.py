@@ -186,7 +186,7 @@ SMS_SENDER = env.str("SMS_SENDER", default="1000596446")
 
 ELASTICSEARCH_DSL = {
     'default': {
-        'hosts': 'localhost:9200'  # مطمئن شو پورت درست است
+        'hosts': 'http://localhost:9200'  # مطمئن شو پورت درست است
     },
 }
 

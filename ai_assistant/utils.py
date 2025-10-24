@@ -1,7 +1,9 @@
 import json
 import logging
-from openai import OpenAI
+from typing import Optional
+
 from django.conf import settings
+from openai import OpenAI
 
 # Logging کامل
 logger = logging.getLogger("ai_assistant")
@@ -11,7 +13,19 @@ formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
 handler.setFormatter(formatter)
 logger.addHandler(handler)
 
-client = OpenAI(api_key=settings.OPENAI_API_KEY)
+_client: Optional[OpenAI] = None
+
+
+def _get_openai_client() -> OpenAI:
+    """Lazily create an OpenAI client when the API key is configured."""
+
+    api_key = settings.OPENAI_API_KEY
+    if not api_key:
+        raise RuntimeError("OpenAI API key is not configured. Set OPENAI_API_KEY to enable AI features.")
+    global _client
+    if _client is None:
+        _client = OpenAI(api_key=api_key)
+    return _client
 
 PERSONA_INSTRUCTIONS = {
     "judge": "You are a strict judge providing formal, precise legal responses.",
@@ -67,6 +81,7 @@ def ask_ai(user, question, user_role=None, persona=None, history=None):
         messages.append({"role": "user", "content": question})
 
         logger.info(f"Sending question to AI | UserRole: {user_role} | Persona: {persona} | Question: {question}")
+        client = _get_openai_client()
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=messages,
