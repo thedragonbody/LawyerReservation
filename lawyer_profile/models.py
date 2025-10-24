@@ -39,6 +39,7 @@ class LawyerProfile(models.Model):
     # پروانه و منطقه فعالیت
     license_number = models.CharField(max_length=50, blank=True)
     city = models.CharField(max_length=100, blank=True)
+    region = models.CharField(max_length=100, blank=True)
 
     # زمان ایجاد و آپدیت
     created_at = models.DateTimeField(auto_now_add=True)
