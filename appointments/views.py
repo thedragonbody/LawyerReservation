@@ -1,19 +1,26 @@
-from rest_framework import generics, permissions, status
-from rest_framework.response import Response
-from django.shortcuts import get_object_or_404
-from .models import OnlineSlot, OnlineAppointment
-from .serializers import OnlineSlotSerializer, OnlineAppointmentSerializer, OnlineAppointmentCancelSerializer, OnlineAppointmentRescheduleSerializer
-from django.utils import timezone
-from rest_framework import serializers
-from rest_framework.views import APIView
-from django.db import transaction
-from django.utils import timezone
 from datetime import timedelta
+
 from django.core.exceptions import ValidationError
-from notifications.models import Notification
+from django.db import transaction
+from django.shortcuts import get_object_or_404
+from django.utils import timezone
+
+from rest_framework import generics, permissions, serializers, status
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
 from common.utils import send_sms
+from notifications.models import Notification
 
 from .integrations import CalendarService, CalendarSyncError
+from .models import OnlineAppointment, OnlineSlot
+from .serializers import (
+    OnlineAppointmentCancelSerializer,
+    OnlineAppointmentRescheduleSerializer,
+    OnlineAppointmentSerializer,
+    OnlineSlotSerializer,
+)
+
 
 
 # لیست اسلات‌های آنلاین برای یک وکیل
