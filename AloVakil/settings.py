@@ -204,20 +204,33 @@ ELASTICSEARCH_DSL = {
 }
 
 # Redis (Cache + Celery Broker)
-CACHES = {
-    "default": {
-        "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": env.str("REDIS_URL", default="redis://127.0.0.1:6379/1"),
-        "OPTIONS": {"CLIENT_CLASS": "django_redis.client.DefaultClient"},
-        "KEY_PREFIX": "alovakil"
+USE_REDIS_CACHE = env.bool("USE_REDIS_CACHE", default=False)
+
+if USE_REDIS_CACHE:
+    CACHES = {
+        "default": {
+            "BACKEND": "django_redis.cache.RedisCache",
+            "LOCATION": env.str("REDIS_URL", default="redis://127.0.0.1:6379/1"),
+            "OPTIONS": {"CLIENT_CLASS": "django_redis.client.DefaultClient"},
+            "KEY_PREFIX": "alovakil"
+        }
     }
-}
+else:
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "LOCATION": "alovakil-local"
+        }
+    }
 
 CELERY_BROKER_URL = env.str("REDIS_URL", default="redis://127.0.0.1:6379/0")
 CELERY_RESULT_BACKEND = CELERY_BROKER_URL
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = "Asia/Tehran"
+CELERY_TASK_ALWAYS_EAGER = env.bool("CELERY_TASK_ALWAYS_EAGER", default=True)
+CELERY_TASK_EAGER_PROPAGATES = env.bool("CELERY_TASK_EAGER_PROPAGATES", default=True)
 
 # AI
 OPENAI_API_KEY = env.str("OPENAI_API_KEY", default=None)
@@ -323,14 +336,6 @@ LOGGING = {
         "ai_assistant": {"handlers": ["console", "file_info", "file_error"], "level": "INFO", "propagate": False},
     },
 }
-
-CELERY_BROKER_URL = "redis://localhost:6379/0"
-CELERY_RESULT_BACKEND = "redis://localhost:6379/0"
-CELERY_ACCEPT_CONTENT = ["json"]
-CELERY_TASK_SERIALIZER = "json"
-CELERY_RESULT_SERIALIZER = "json"
-CELERY_TIMEZONE = "Asia/Tehran"
-
 
 MIDDLEWARE += ["common.middleware.SessionIdleTimeout"]
 SESSION_IDLE_TIMEOUT = 60*60*24
