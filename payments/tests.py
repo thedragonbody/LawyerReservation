@@ -18,6 +18,61 @@ from payments.models import Payment, Wallet
 from users.models import User
 
 
+class VerifyPaymentViewTests(APITestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            phone_number="09120000099", password="pass1234", is_active=True
+        )
+        self.client.force_authenticate(self.user)
+        self.payment = Payment.objects.create(
+            user=self.user,
+            amount=Decimal("100000"),
+            payment_method=Payment.Method.IDPAY,
+        )
+        self.url = reverse("payments:payment-verify")
+
+    @patch("payments.views.payment_utils.verify_payment_request")
+    def test_successful_verification_marks_payment_completed(self, mock_verify):
+        mock_verify.return_value = {
+            "status": 100,
+            "track_id": "track-1",
+            "order_id": str(self.payment.id),
+        }
+
+        payload = {
+            "id": "provider-1",
+            "order_id": str(self.payment.id),
+            "status": 100,
+        }
+
+        response = self.client.post(self.url, payload, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        mock_verify.assert_called_once_with("provider-1")
+
+        self.payment.refresh_from_db()
+        self.assertEqual(self.payment.status, Payment.Status.COMPLETED)
+        self.assertEqual(self.payment.transaction_id, "provider-1")
+        self.assertEqual(self.payment.provider_data, mock_verify.return_value)
+
+    @patch("payments.views.payment_utils.verify_payment_request")
+    def test_unsuccessful_status_marks_payment_failed(self, mock_verify):
+        payload = {
+            "id": "provider-1",
+            "order_id": str(self.payment.id),
+            "status": 10,
+        }
+
+        response = self.client.post(self.url, payload, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        mock_verify.assert_not_called()
+
+        self.payment.refresh_from_db()
+        self.assertEqual(self.payment.status, Payment.Status.FAILED)
+        self.assertIsNone(self.payment.provider_data)
+
+
 class WalletIntegrationTests(APITestCase):
     def setUp(self):
         self.user = User.objects.create_user(phone_number="09120000000", password="pass1234", is_active=True)
