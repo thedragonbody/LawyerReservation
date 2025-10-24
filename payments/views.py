@@ -39,7 +39,7 @@ class CreatePaymentView(generics.CreateAPIView):
             return Response({"error": "Appointment not found or unauthorized"}, status=404)
 
         # جلوگیری از ایجاد پرداخت تکراری
-        if hasattr(appointment, "payment") and appointment.payment.status == Payment.Status.COMPLETED:
+        if appointment.payments.filter(status=Payment.Status.COMPLETED).exists():
             return Response({"detail": "Payment already completed for this appointment."}, status=400)
 
         payment_method = request.data.get("payment_method", Payment.Method.IDPAY)
