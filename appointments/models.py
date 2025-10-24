@@ -1,13 +1,17 @@
+from datetime import timedelta
+
+from django.core.exceptions import ValidationError
 from django.db import models, transaction
 from django.utils import timezone
-from lawyer_profile.models import LawyerProfile
+
 from client_profile.models import ClientProfile
-from common.models import BaseModel
 from common.choices import AppointmentStatus
-from notifications.models import Notification
+from common.models import BaseModel
 from common.utils import send_sms
-from django.core.exceptions import ValidationError
-from datetime import timedelta
+from lawyer_profile.models import LawyerProfile
+from notifications.models import Notification
+
+from .integrations import CalendarService, CalendarSyncError, CalendarSyncResult
 
 class OnlineSlot(BaseModel):
     lawyer = models.ForeignKey(LawyerProfile, on_delete=models.CASCADE, related_name='online_slots')
@@ -36,6 +40,7 @@ class OnlineAppointment(BaseModel):
     google_meet_link = models.URLField(blank=True, null=True)
     description = models.TextField(blank=True)
     is_reminder_sent = models.BooleanField(default=False)
+    calendar_event_id = models.CharField(max_length=255, blank=True, null=True)
 
     class Meta:
         ordering = ['slot__start_time']
@@ -46,9 +51,9 @@ class OnlineAppointment(BaseModel):
     # -----------------------------
     # عملیات رزرو با race condition
     # -----------------------------
-    def confirm(self):
+    def confirm(self, calendar_service=None, **kwargs):
         if self.status == AppointmentStatus.CONFIRMED:
-            return False
+            return CalendarSyncResult(success=True, event_id=self.calendar_event_id)
 
         # محدودیت 1 رزرو در روز
         today = self.slot.start_time.date()
@@ -68,21 +73,33 @@ class OnlineAppointment(BaseModel):
             self.google_meet_link = self.create_google_meet_link()
             self.save(update_fields=["status", "google_meet_link"])
 
+        calendar_service = calendar_service or CalendarService()
+        sync_result = CalendarSyncResult(success=True, event_id=self.calendar_event_id)
+        try:
+            event_id = calendar_service.create_event(self)
+        except CalendarSyncError as exc:
+            sync_result = CalendarSyncResult(success=False, message=str(exc), event_id=self.calendar_event_id)
+        else:
+            if event_id and event_id != self.calendar_event_id:
+                self.calendar_event_id = event_id
+                self.save(update_fields=["calendar_event_id"])
+                sync_result = CalendarSyncResult(success=True, event_id=event_id)
+
         # ارسال اتوماتیک Notification و SMS
         self.send_notifications()
-        return True
+        return sync_result
 
     # -----------------------------
     # Cancel / Reschedule
     # -----------------------------
-    def cancel(self, user):
+    def cancel(self, user=None, calendar_service=None, **kwargs):
         # فقط کاربر می‌تواند لغو کند و تا 24 ساعت قبل
-        if user != self.client.user:
+        if user and user != self.client.user:
             raise ValidationError("فقط کاربر می‌تواند لغو کند.")
         if self.slot.start_time - timezone.now() < timedelta(hours=24):
             raise ValidationError("لغو رزرو تنها تا 24 ساعت قبل امکان‌پذیر است.")
         if self.status in [AppointmentStatus.CANCELLED, AppointmentStatus.COMPLETED]:
-            return False
+            return CalendarSyncResult(success=True, event_id=self.calendar_event_id)
 
         with transaction.atomic():
             slot_qs = OnlineSlot.objects.select_for_update().filter(pk=self.slot.pk)
@@ -92,8 +109,19 @@ class OnlineAppointment(BaseModel):
 
             self.status = AppointmentStatus.CANCELLED
             self.save(update_fields=["status"])
+        calendar_service = calendar_service or CalendarService()
+        sync_result = CalendarSyncResult(success=True, event_id=self.calendar_event_id)
+        try:
+            calendar_service.delete_event(self)
+        except CalendarSyncError as exc:
+            sync_result = CalendarSyncResult(success=False, message=str(exc), event_id=self.calendar_event_id)
+        else:
+            if self.calendar_event_id:
+                self.calendar_event_id = None
+                self.save(update_fields=["calendar_event_id"])
+                sync_result = CalendarSyncResult(success=True, event_id=None)
 
-        return True
+        return sync_result
 
     # -----------------------------
     # ایجاد لینک Google Meet

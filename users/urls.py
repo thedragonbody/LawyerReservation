@@ -1,5 +1,12 @@
 from django.urls import path
-from .views import SendLoginOTPView, VerifyLoginOTPView, ResendOTPView, SecurityCheckView, BlacklistCleanupView
+from .views import (
+    BlacklistCleanupView,
+    OAuthTokenView,
+    ResendOTPView,
+    SecurityCheckView,
+    SendLoginOTPView,
+    VerifyLoginOTPView,
+)
 from rest_framework_simplejwt.views import TokenRefreshView
 
 urlpatterns = [
@@ -9,4 +16,5 @@ urlpatterns = [
     path("otp/resend/", ResendOTPView.as_view(), name="otp-resend"),
     path("security/check/", SecurityCheckView.as_view(), name="security-check"),
     path("blacklist/cleanup/", BlacklistCleanupView.as_view(), name="blacklist-cleanup"),
+    path("oauth/<str:provider>/", OAuthTokenView.as_view(), name="oauth-token"),
 ]
