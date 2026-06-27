@@ -1,0 +1,35 @@
+{
+  "name": "lexara-frontend",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "next": "14.2.0",
+    "react": "^18.3.0",
+    "react-dom": "^18.3.0",
+    "axios": "^1.6.8",
+    "clsx": "^2.1.0",
+    "date-fns": "^3.6.0",
+    "framer-motion": "^11.1.9",
+    "js-cookie": "^3.0.5",
+    "lucide-react": "^0.378.0",
+    "react-hot-toast": "^2.4.1",
+    "react-dropzone": "^14.2.3",
+    "react-query": "^3.39.3",
+    "zustand": "^4.5.2"
+  },
+  "devDependencies": {
+    "@types/js-cookie": "^3.0.6",
+    "@types/node": "^20",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "typescript": "^5",
+    "eslint": "^8",
+    "eslint-config-next": "14.2.0"
+  }
+}
